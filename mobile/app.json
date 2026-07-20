@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "PROSAFE EGA Orders",
+    "slug": "prosafe-ega-orders",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["android", "ios"],
+    "splash": {
+      "backgroundColor": "#0f2a43"
+    },
+    "android": {
+      "package": "com.prosafe.egaorders",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0f2a43"
+      },
+      "permissions": []
+    },
+    "ios": {
+      "bundleIdentifier": "com.prosafe.egaorders",
+      "supportsTablet": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": "REPLACED-AUTOMATICALLY-BY-eas-init"
+      }
+    }
+  }
+}
