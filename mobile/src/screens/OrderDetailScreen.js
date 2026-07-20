@@ -61,7 +61,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       <Card>
         <KV k="Date" v={fmtDT(o.createdAt)} />
         <KV k="Contract Ref" v={o.contract} />
-        <KV k="Employee" v={`${o.emp} — ${o.empName}`} />
+        <KV k="Employee" v={`${o.empId || ""} ${o.empName}`.trim()} />
         <KV k="Department" v={o.dept || "—"} />
         <KV k="Customer" v={o.customerName} />
         {o.so ? <KV k="ERP Sales Order" v={o.so} /> : null}

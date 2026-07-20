@@ -1,100 +1,123 @@
-# PROSAFE × EGA — End-to-End Ordering App
+# PROSAFE × EGA — Production Full-Stack Ordering Platform
 
-A production codebase built from your SRS (Mobile App SRS1 08-07-26), system-requirement, security and flow-chart documents.
+Mobile app (Google Play-ready) + Website + Middleware + Supabase database/auth + ERPNext integration.
+Built from your SRS (Mobile App SRS1 08-07-26), security, licensing and flow-chart documents.
 
 ```
-┌─────────────────┐      HTTPS/JSON       ┌──────────────────┐      REST API       ┌─────────────┐
-│  Mobile App      │  ───────────────►    │  Middleware       │  ───────────────►  │  ERP         │
-│  (Expo / React   │   JWT auth           │  (Node.js/Express)│   adapter layer    │  Focus9 stub │
-│   Native)        │  ◄───────────────    │  business rules   │  ◄───────────────  │  or ERPNext  │
-└─────────────────┘                       └──────────────────┘                     └─────────────┘
-     mobile/                                   middleware/
+┌──────────────────┐
+│  Mobile App       │──┐
+│  (Expo / React    │  │   HTTPS/JSON      ┌──────────────────┐        ┌───────────────────────┐
+│   Native)         │  ├────────────────►  │  Middleware       │ ────►  │  Supabase              │
+└──────────────────┘  │   JWT auth        │  (Node/Express)   │        │  (Postgres + Auth)     │
+┌──────────────────┐  │                   │  business rules   │        └───────────────────────┘
+│  Website          │──┘                   │                   │ ────►  ERPNext (live) /
+│  (React + Vite)   │                      └──────────────────┘        Focus9 (stub w/ TODOs)
+└──────────────────┘
+   web/                                       middleware/
 ```
 
-**What's implemented** (full SRS coverage): masters (customers, employees, departments, items, price lists 1–4, locations, UOM) · shopping restricted to the employee's approved price list with group/category browsing · allocated-qty checks · Order Cart vs Approval Cart · order screen with system running numbers (OR1001, lines OR1001/001…) · EGA client approval (approve = SO created + approved qty list raised; reject = Reject bucket) · 15-minute cancel window · Delivery Note creation · receipt acknowledgement (partial/full, updates Received/Balance) · material returns crediting the allocation · DO consolidation → invoice to EGA · order buckets · role-based logins (employee / approver / admin) · JWT auth, PIN login, server-side validation of every price and limit.
+**Features**: e-mail/password **account creation**, **login**, **account deletion** (Play Store requirement) · self-signup with **admin activation** (admin assigns company, department, price list) · shopping restricted to approved price lists · allocation limits · Order vs Approval carts · EGA approval workflow · 15-min cancel window · delivery notes · receipt acknowledgement · returns · DO-consolidated invoicing · role-based access (employee / approver / admin) · full masters per SRS.
+
+**Two run modes** (auto-detected): leave Supabase keys empty → **local demo mode** (JSON DB, demo logins, password `prosafe1`); fill them in → **production mode** (Supabase Postgres + Supabase Auth).
 
 ---
 
-## 1. Run the middleware (backend)
+## 1. Set up Supabase (production database + auth)
 
-Requires [Node.js 18+](https://nodejs.org). In a terminal:
+1. Create a free project at https://supabase.com
+2. SQL Editor → paste & run `middleware/supabase/schema.sql`, then `middleware/supabase/seed.sql`
+3. **Authentication → Providers → Email**: for the smoothest start, turn **off** "Confirm email" (turn it back on later — the apps handle both).
+4. **Settings → API**: copy Project URL, `anon` key, `service_role` key.
+
+## 2. Configure & run the middleware
 
 ```bash
 cd middleware
 npm install
-copy .env.example .env        # (Windows)  — edit JWT_SECRET
-npm start
+copy .env.example .env
+```
+Edit `.env`:
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — from step 1 (or leave empty for demo mode)
+- `ADMIN_EMAILS=sachdukr@gmail.com` — sign up with this e-mail to become the **active admin automatically** (bootstrap)
+- `JWT_SECRET` — any long random string
+
+```bash
+npm start          # → http://localhost:4000  (log line shows storage/auth/erp modes)
 ```
 
-Server runs at `http://localhost:4000`. Data persists in `middleware/data/db.json` (delete it to reset the demo).
+**Demo-mode logins** (password `prosafe1`): ahmed.m@dubal.ae · ravi.k@emal.ae · sara.k@twa.ae · m.hassan@ega.ae (approver) · stores@prosafe.ae (admin). In Supabase mode there are no demo users — everyone signs up.
 
-Demo logins: **E1001/1111**, **E1002/2222**, **E1003/3333** (employees) · **A2001/4444** (EGA approver) · **S3001/5555** (PROSAFE admin).
+## 3. Run the website
 
-### Switching ERP
-- Default: `ERP_PROVIDER=focus9-stub` — fully working simulation; swap in real calls in `middleware/erp/focus9.js` once Focus Softnet provides API docs (TODOs are marked).
-- Live ERPNext: set `ERP_PROVIDER=erpnext` plus `ERPNEXT_URL`, `ERPNEXT_API_KEY`, `ERPNEXT_API_SECRET` in `.env`. Create the same item codes and customer names in ERPNext first. Sales Orders, Delivery Notes, Returns and Invoices are then created in the real ERP.
+```bash
+cd web
+npm install
+copy .env.example .env      # VITE_API_URL=http://localhost:4000
+npm run dev                 # → http://localhost:5173
+```
+Deploy: `npm run build` → upload `dist/` to Vercel/Netlify/any static host; set `VITE_API_URL` to your public middleware URL at build time.
 
-## 2. Run the mobile app (development)
-
-Requires Node.js and the **Expo Go** app ([Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)) on your phone.
+## 4. Run the mobile app
 
 ```bash
 cd mobile
 npm install
+npx expo start              # scan QR with Expo Go
 ```
+Set the middleware URL in `mobile/src/config.js` (LAN IP for a physical phone, HTTPS URL for production).
 
-Edit `mobile/src/config.js` → set `API_URL`:
-- Android emulator: `http://10.0.2.2:4000`
-- Physical phone on the same Wi-Fi: `http://YOUR-PC-IP:4000` (find it with `ipconfig`)
+## 5. First-run walkthrough
 
-```bash
-npx expo start
+1. Open web or mobile → **Create Account** with your `ADMIN_EMAILS` address → you're instantly an active admin.
+2. Colleagues sign up → they see "awaiting activation".
+3. Admin (web → **Users**): assign role/company/department/price list → **Activate**.
+4. Employee shops → orders within limits create the ERP SO instantly; over-limit/restricted items go to the **Approval** bucket.
+5. Approver approves (SO created, approved-qty list raised) or rejects.
+6. Admin creates Delivery Notes → employee acknowledges receipt → returns credit the allocation → admin consolidates DOs → invoice to EGA.
+7. Anyone can delete their own account from **Profile** (admin can also delete users).
+
+## 6. ERPNext integration (live ERP)
+
+In `middleware/.env`:
 ```
-
-Scan the QR code with Expo Go. If you see dependency version warnings, run `npx expo install --fix`.
-
-## 3. Publish to Google Play
-
-The app builds in Expo's cloud — no Android Studio needed.
-
-**One-time setup**
-1. Create a free account at https://expo.dev
-2. Create a **Google Play Console** developer account at https://play.google.com/console ($25 one-time fee)
-3. Deploy the middleware to a public HTTPS server (e.g. a small VPS, Render, Railway, or Azure) and put that URL in `mobile/src/config.js` — Play Store apps must use HTTPS, not a LAN IP.
-
-**Build the release bundle**
-```bash
-cd mobile
-npm install -g eas-cli
-eas login
-eas init            # links the project, fills in projectId automatically
-eas build --platform android --profile production
+ERP_PROVIDER=erpnext
+ERPNEXT_URL=https://your-site.erpnext.com
+ERPNEXT_API_KEY=…
+ERPNEXT_API_SECRET=…
 ```
-EAS builds a signed `.aab` in the cloud (~15 min) and gives you a download link. For a quick installable test APK instead: `eas build -p android --profile preview`.
+Prerequisites on the ERPNext site: an API user with key/secret, **items with the same item codes** (PPE-SHOE-42, …) and **customers with the same names** (Dubal, Emal, …) as the seed masters. Then real Sales Orders, Delivery Notes, Returns and Sales Invoices are created in ERPNext (also mirrored into Supabase for in-app display). Focus9: keep `ERP_PROVIDER=focus9-stub`; replace the marked TODOs in `middleware/erp/focus9.js` when Focus Softnet provides API docs.
 
-**Upload to Play Console**
-1. Play Console → **Create app** → name "PROSAFE EGA Orders", type App, free
-2. Complete the required declarations (privacy policy URL, data safety form, content rating)
-3. **Testing → Internal testing → Create release** → upload the `.aab` → add tester emails → roll out
-4. After testing, promote to **Production** → Google review (usually 1–3 days) → live
+## 7. Publish to Google Play
 
-Later updates: bump nothing manually — `eas build` auto-increments the version, then upload the new `.aab` as a new release. `eas submit -p android` can push builds to Play automatically once the first release is live.
+1. Deploy the middleware to a public **HTTPS** host (Render / Railway / a VPS). Put that URL in `mobile/src/config.js`.
+2. ```bash
+   cd mobile
+   npm install -g eas-cli
+   eas login
+   eas init
+   eas build --platform android --profile production
+   ```
+3. Play Console (https://play.google.com/console, $25 one-time): create the app, upload the `.aab`, complete the **Data safety** form:
+   - Data collected: name, e-mail, phone (account management)
+   - **Account deletion**: the app has in-app deletion (Profile → Delete my account) — Google requires this and it's already implemented. You must also provide a web deletion URL: your deployed website's profile page qualifies.
+4. Internal testing → Production → review (1–3 days).
 
-## Before real go-live (recommended hardening)
+## Production hardening checklist
 
-Per your security document: replace demo PINs with real credential management + OTP/MFA · move the JSON datastore to PostgreSQL/MySQL · serve middleware behind HTTPS (nginx/Caddy + Let's Encrypt) · set a strong `JWT_SECRET` · add rate limiting (`express-rate-limit`) · pin certificates in the app · confirm Focus9 API licensing with Focus Softnet (per your Licenses doc, app users don't consume ERP user licenses — the integration user does).
+HTTPS everywhere (middleware behind nginx/Caddy or a PaaS with TLS) · strong `JWT_SECRET` · keep `service_role` key **only** on the server · re-enable Supabase e-mail confirmation · add rate limiting (`express-rate-limit`) · Supabase automatic backups are on by default · rotate ERPNext API keys periodically · monitor the ERP event log (Fulfilment → API/Event Log) for flagged sync failures.
 
 ## Project layout
 
 ```
 prosafe-app/
-├── middleware/            Node.js business-logic layer
-│   ├── server.js          REST API + all business rules
-│   ├── db.js              datastore + seed masters (per SRS)
-│   └── erp/               focus9.js (stub) · erpnext.js (live) · index.js (selector/retry)
-└── mobile/                Expo React Native app (Android + iOS)
-    ├── App.js             navigation, role-based tabs
-    ├── app.json           app name, com.prosafe.egaorders package id
-    ├── eas.json           cloud build profiles (preview APK / production AAB)
-    └── src/screens/       Login · Shop · Carts · Orders · OrderDetail · Profile · Approvals · Fulfilment
+├── middleware/                 Node.js business-logic layer (v2)
+│   ├── server.js               REST API — auth, orders, approvals, fulfilment, admin
+│   ├── auth.js                 signup / login / refresh / account deletion (Supabase Auth or local)
+│   ├── store/                  supabase.js (Postgres) · local.js (JSON demo) · seed-data.js
+│   ├── erp/                    erpnext.js (live) · focus9.js (stub) · index.js (selector + retry)
+│   └── supabase/               schema.sql · seed.sql  (paste into Supabase SQL editor)
+├── web/                        React + Vite portal (all roles) → deploy dist/ anywhere
+│   └── src/pages/              Auth · Shop · Carts · Orders · Approvals · Fulfilment · Users · Profile
+└── mobile/                     Expo React Native app (Android + iOS)
+    └── src/screens/            Login/Signup · Shop · Carts · Orders · Detail · Profile(+delete) · Approvals · Fulfilment
 ```

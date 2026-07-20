@@ -1,219 +1,267 @@
 /**
- * PROSAFE × EGA — Middleware / Business Logic Layer
- * Mobile app ⇄ THIS SERVER ⇄ ERP (Focus9 stub | ERPNext live)
+ * PROSAFE × EGA — Middleware / Business Logic Layer  v2
+ *   Mobile app + Web portal ⇄ THIS SERVER ⇄ Supabase (DB + Auth) ⇄ ERP (ERPNext live / Focus9 stub)
  *
- * Security per "Mobile App security" doc:
- *  - JWT token auth (no ERP credentials ever reach the mobile app)
- *  - App never talks to the ERP directly; this layer validates + transforms
- *  - Serve behind HTTPS in production (reverse proxy e.g. nginx/Caddy)
+ * Modes (auto-detected from .env):
+ *   SUPABASE_URL set   → production: Supabase Postgres + Supabase Auth
+ *   SUPABASE_URL empty → local demo: JSON-file DB + demo logins (password "prosafe1")
  */
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const jwt = require("jsonwebtoken");
-const db = require("./db");
+const store = require("./store");
+const authsvc = require("./auth");
 const { safeCall } = require("./erp");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
-const PORT = process.env.PORT || 4000;
-const CANCEL_WINDOW_MIN = 15;
-
-/* ---------------- auth ---------------- */
-app.post("/api/auth/login", (req, res) => {
-  const { empId, pin } = req.body || {};
-  const e = db.emp(String(empId || "").toUpperCase().trim());
-  if (!e || e.pin !== String(pin || "")) return res.status(401).json({ error: "Invalid Employee ID or PIN" });
-  const token = jwt.sign({ id: e.id, role: e.role }, SECRET, { expiresIn: "12h" });
-  const { pin: _p, ...user } = e;
-  res.json({ token, user, customer: e.customer ? db.cust(e.customer) : null });
+/* Serverless-friendly init gate: ensure the store is ready before any route
+   (on Vercel there is no boot phase — init runs on first request). */
+let _ready = null;
+app.use((req, res, next) => {
+  _ready = _ready || store.init();
+  _ready.then(() => next()).catch(e => {
+    _ready = null;
+    res.status(503).json({ error: "Database not ready: " + e.message + ". If using Supabase, run supabase/schema.sql and seed.sql first." });
+  });
 });
 
-function auth(...roles) {
-  return (req, res, next) => {
-    const h = req.headers.authorization || "";
-    const token = h.startsWith("Bearer ") ? h.slice(7) : null;
-    try {
-      const payload = jwt.verify(token, SECRET);
-      req.user = db.emp(payload.id);
-      if (!req.user) throw new Error("no user");
-      if (roles.length && !roles.includes(req.user.role)) return res.status(403).json({ error: "Forbidden for role " + req.user.role });
-      next();
-    } catch (e) {
-      res.status(401).json({ error: "Unauthorized" });
-    }
+const PORT = process.env.PORT || 4000;
+const CANCEL_WINDOW_MIN = 15;
+const requireAuth = authsvc.requireAuth;
+
+/* masters cache (60 s) */
+let mCache = null, mCacheAt = 0;
+async function masters() {
+  if (!mCache || Date.now() - mCacheAt > 60000) { mCache = await store.masters(); mCacheAt = Date.now(); }
+  return mCache;
+}
+const wrap = fn => (req, res) => fn(req, res).catch(e => {
+  console.error(e);
+  res.status(e.status || 500).json({ error: e.message || "Server error" });
+});
+
+async function balancesFor(userId, plId) {
+  const m = await masters();
+  const p = m.priceLists.find(x => x.id === plId);
+  if (!p) return { pl: null, lines: [] };
+  const { consumption, extra } = await store.getAlloc(userId);
+  const lines = p.lines.map(l => {
+    const allocated = l.alloc + (extra[l.code] || 0);
+    const used = consumption[l.code] || 0;
+    return { ...l, allocated, used, balance: allocated - used };
+  });
+  return { pl: p, lines };
+}
+function pub(profile) {
+  const { id, email, name, phone, empId, role, customer, dept, priceList, active } = profile;
+  return { id, email, name, phone, empId, role, customer, dept, priceList, active };
+}
+function orderDTO(o) {
+  return {
+    ...o,
+    cancellable: o.status === "in_progress" && Date.now() - Date.parse(o.createdAt) < CANCEL_WINDOW_MIN * 60000
   };
 }
 
-/* ---------------- catalog (employee) ---------------- */
-app.get("/api/catalog", auth("employee"), (req, res) => {
-  const p = db.pl(req.user.priceList);
-  if (!p) return res.status(404).json({ error: "No approved price list assigned" });
-  const lines = p.lines.map(l => ({
-    ...l, item: db.item(l.code),
-    allocated: db.allocFor(req.user.id, l.code),
-    used: db.consumed(req.user.id, l.code),
-    balance: db.balanceFor(req.user.id, l.code)
-  }));
-  res.json({
-    priceList: { id: p.id, name: p.name, contract: p.contract, validFrom: p.validFrom, validTill: p.validTill },
-    customer: db.cust(p.customer),
-    contracts: db.load().priceLists.map(x => ({ contract: x.contract, name: x.name })),
-    lines
+/* ══════════════════ AUTH & ACCOUNT LIFECYCLE ══════════════════ */
+app.post("/api/auth/signup", wrap(async (req, res) => {
+  const { profile, session, pendingActivation } = await authsvc.signup(req.body || {});
+  res.status(201).json({
+    user: pub(profile),
+    token: session ? session.token : null,
+    refreshToken: session ? session.refreshToken : null,
+    pendingActivation,
+    emailConfirmationRequired: !session && authsvc.SUPA,
+    message: pendingActivation
+      ? "Account created. A PROSAFE admin must assign your company and price list before you can order."
+      : "Admin account created and activated."
   });
-});
+}));
 
-app.get("/api/profile", auth(), (req, res) => {
-  const { pin, ...user } = req.user;
-  const p = user.priceList ? db.pl(user.priceList) : null;
+app.post("/api/auth/login", wrap(async (req, res) => {
+  const { profile, session } = await authsvc.login(req.body || {});
+  const m = await masters();
   res.json({
-    user, customer: user.customer ? db.cust(user.customer) : null,
-    priceList: p ? { id: p.id, name: p.name, contract: p.contract } : null,
-    approvedQtyList: p ? p.lines.map(l => ({
-      code: l.code, name: db.item(l.code).name, uom: db.item(l.code).uom, restricted: l.restricted,
-      allocated: db.allocFor(user.id, l.code), used: db.consumed(user.id, l.code), balance: db.balanceFor(user.id, l.code)
-    })) : []
+    user: pub(profile),
+    token: session.token, refreshToken: session.refreshToken,
+    customer: profile.customer ? m.customers.find(c => c.id === profile.customer) : null,
+    pendingActivation: profile.role === "employee" && (!profile.active || !profile.priceList)
   });
-});
+}));
 
-/* ---------------- orders ---------------- */
-function orderDTO(o) {
-  const e = db.emp(o.emp);
-  return { ...o, empName: e ? e.name : o.emp, customerName: db.cust(o.customer)?.name,
-    cancellable: o.status === "in_progress" && (Date.now() - Date.parse(o.createdAt)) < CANCEL_WINDOW_MIN * 60000 };
-}
+app.post("/api/auth/refresh", wrap(async (req, res) => {
+  res.json(await authsvc.refresh((req.body || {}).refreshToken));
+}));
 
-/** Place an order. kind: "order" (within limits) | "approval" */
-app.post("/api/orders", auth("employee"), async (req, res) => {
+app.delete("/api/auth/account", requireAuth(), wrap(async (req, res) => {
+  await authsvc.deleteAccount(req.user.id);
+  await store.erpLog(`Account deleted on user request: ${req.user.email} (${req.user.empId})`);
+  res.json({ ok: true, message: "Your account and personal data have been deleted." });
+}));
+
+/* ══════════════════ PROFILE ══════════════════ */
+app.get("/api/profile", requireAuth(), wrap(async (req, res) => {
+  const m = await masters();
+  const u = req.user;
+  const { lines, pl } = u.priceList ? await balancesFor(u.id, u.priceList) : { lines: [], pl: null };
+  res.json({
+    user: pub(u),
+    customer: u.customer ? m.customers.find(c => c.id === u.customer) : null,
+    priceList: pl ? { id: pl.id, name: pl.name, contract: pl.contract } : null,
+    pendingActivation: u.role === "employee" && (!u.active || !u.priceList),
+    approvedQtyList: lines.map(l => {
+      const i = m.items.find(x => x.code === l.code);
+      return { code: l.code, name: i.name, uom: i.uom, restricted: l.restricted, allocated: l.allocated, used: l.used, balance: l.balance };
+    })
+  });
+}));
+
+/* ══════════════════ CATALOG ══════════════════ */
+app.get("/api/catalog", requireAuth("employee"), wrap(async (req, res) => {
+  const u = req.user;
+  if (!u.active || !u.priceList)
+    return res.status(403).json({ error: "Your account is awaiting activation by the PROSAFE admin", pendingActivation: true });
+  const m = await masters();
+  const { pl, lines } = await balancesFor(u.id, u.priceList);
+  res.json({
+    priceList: { id: pl.id, name: pl.name, contract: pl.contract, validFrom: pl.validFrom, validTill: pl.validTill },
+    customer: m.customers.find(c => c.id === pl.customer),
+    lines: lines.map(l => ({ ...l, item: m.items.find(i => i.code === l.code) }))
+  });
+}));
+
+/* ══════════════════ ORDERS ══════════════════ */
+app.post("/api/orders", requireAuth("employee"), wrap(async (req, res) => {
+  const u = req.user;
+  if (!u.active || !u.priceList)
+    return res.status(403).json({ error: "Account awaiting activation", pendingActivation: true });
   const { kind, lines: reqLines, contract } = req.body || {};
   if (!["order", "approval"].includes(kind)) return res.status(400).json({ error: "kind must be order|approval" });
   if (!Array.isArray(reqLines) || !reqLines.length) return res.status(400).json({ error: "lines required" });
-  const p = db.pl(req.user.priceList);
-  if (!p) return res.status(400).json({ error: "No approved price list" });
 
-  // validate + price every line server-side (never trust client prices)
+  const m = await masters();
+  const { pl, lines: balLines } = await balancesFor(u.id, u.priceList);
   const built = [];
   for (const rl of reqLines) {
-    const l = db.plLine(p.id, rl.code);
+    const l = balLines.find(x => x.code === rl.code);
     const qty = Number(rl.qty);
     if (!l) return res.status(400).json({ error: `Item ${rl.code} is not on your approved price list` });
     if (!(qty > 0)) return res.status(400).json({ error: `Invalid qty for ${rl.code}` });
-    built.push({ code: rl.code, qty, uom: db.item(rl.code).uom, price: l.price, restricted: l.restricted });
+    built.push({ code: rl.code, qty, uom: m.items.find(i => i.code === rl.code).uom, price: l.price, restricted: l.restricted, balance: l.balance });
   }
   if (kind === "order") {
     for (const b of built) {
       if (b.restricted) return res.status(422).json({ error: `${b.code} is restricted — send via approval cart`, needsApproval: true });
-      if (b.qty > db.balanceFor(req.user.id, b.code))
-        return res.status(422).json({ error: `${b.code} exceeds allocated balance — send via approval cart`, needsApproval: true });
+      if (b.qty > b.balance) return res.status(422).json({ error: `${b.code} exceeds allocated balance — send via approval cart`, needsApproval: true });
     }
   }
 
-  const d = db.load();
-  const ref = db.nextSeq("or", "OR");
+  const ref = "OR" + (await store.nextSeq("or"));
   const lines = built.map((b, ix) => ({
     lineRef: `${ref}/${String(ix + 1).padStart(3, "0")}`,
     code: b.code, qty: b.qty, uom: b.uom, price: b.price,
     amount: +(b.qty * b.price).toFixed(2), received: 0
   }));
   const order = {
-    ref, contract: contract || p.contract, emp: req.user.id, dept: req.user.dept,
-    customer: p.customer, priceList: p.id, createdAt: new Date().toISOString(),
+    ref, contract: contract || pl.contract,
+    emp: u.id, empId: u.empId, empName: u.name, dept: u.dept,
+    customer: pl.customer, customerName: m.customers.find(c => c.id === pl.customer).name,
+    priceList: pl.id, createdAt: new Date().toISOString(),
     status: kind === "order" ? "in_progress" : "pending_approval",
     lines, total: +lines.reduce((s, l) => s + l.amount, 0).toFixed(2),
     so: null, dns: [],
     history: [{ at: new Date().toISOString(), ev: `Order placed (${kind === "order" ? "Order Cart" : "Approval Cart"})` }]
   };
-  d.orders.unshift(order);
+  await store.createOrder(order);
 
   if (kind === "order") {
-    lines.forEach(l => db.addConsumption(req.user.id, l.code, l.qty));
+    for (const l of lines) await store.addConsumption(u.id, l.code, l.qty);
     const r = await safeCall("createSalesOrder", order);
-    if (r && r.soRef) { order.so = r.soRef; order.history.push({ at: new Date().toISOString(), ev: `ERP SO ${r.soRef} created` }); }
+    if (r && r.soRef) {
+      order.so = r.soRef;
+      order.history.push({ at: new Date().toISOString(), ev: `ERP SO ${r.soRef} created` });
+      await store.saveOrder(order);
+    }
   } else {
-    db.erpLog(`Order ${ref} (${req.user.name}) held in middleware — awaiting EGA client approval`);
+    await store.erpLog(`Order ${ref} (${u.name}) held in middleware — awaiting EGA client approval`);
   }
-  db.save();
   res.status(201).json(orderDTO(order));
-});
+}));
 
-app.get("/api/orders", auth(), (req, res) => {
-  const d = db.load();
-  let list = d.orders;
+app.get("/api/orders", requireAuth(), wrap(async (req, res) => {
+  let list = await store.listOrders();
   if (req.user.role === "employee") list = list.filter(o => o.emp === req.user.id);
   if (req.user.role === "approver" && req.query.pending === "1") list = list.filter(o => o.status === "pending_approval");
   res.json(list.map(orderDTO));
-});
+}));
 
-app.get("/api/orders/:ref", auth(), (req, res) => {
-  const o = db.load().orders.find(x => x.ref === req.params.ref);
+app.get("/api/orders/:ref", requireAuth(), wrap(async (req, res) => {
+  const o = await store.getOrder(req.params.ref);
   if (!o) return res.status(404).json({ error: "Not found" });
   if (req.user.role === "employee" && o.emp !== req.user.id) return res.status(403).json({ error: "Not your order" });
   res.json(orderDTO(o));
-});
+}));
 
-/* cancel within 15 minutes */
-app.post("/api/orders/:ref/cancel", auth("employee"), async (req, res) => {
-  const o = db.load().orders.find(x => x.ref === req.params.ref && x.emp === req.user.id);
-  if (!o) return res.status(404).json({ error: "Not found" });
+app.post("/api/orders/:ref/cancel", requireAuth("employee"), wrap(async (req, res) => {
+  const o = await store.getOrder(req.params.ref);
+  if (!o || o.emp !== req.user.id) return res.status(404).json({ error: "Not found" });
   if (o.status !== "in_progress") return res.status(422).json({ error: "Only in-progress orders can be cancelled" });
   if (Date.now() - Date.parse(o.createdAt) >= CANCEL_WINDOW_MIN * 60000)
     return res.status(422).json({ error: `The ${CANCEL_WINDOW_MIN}-minute cancellation window has passed` });
   o.status = "cancelled";
   o.history.push({ at: new Date().toISOString(), ev: "Cancelled by employee within 15-min window" });
-  o.lines.forEach(l => db.addConsumption(o.emp, l.code, -l.qty));
+  for (const l of o.lines) await store.addConsumption(o.emp, l.code, -l.qty);
   if (o.so) await safeCall("cancelSalesOrder", o.so);
-  db.save();
+  await store.saveOrder(o);
   res.json(orderDTO(o));
-});
+}));
 
-/* approve / reject (approver) */
-app.post("/api/orders/:ref/approve", auth("approver"), async (req, res) => {
-  const o = db.load().orders.find(x => x.ref === req.params.ref);
+app.post("/api/orders/:ref/approve", requireAuth("approver"), wrap(async (req, res) => {
+  const o = await store.getOrder(req.params.ref);
   if (!o || o.status !== "pending_approval") return res.status(422).json({ error: "Order is not awaiting approval" });
-  o.lines.forEach(l => {
-    const bal = db.balanceFor(o.emp, l.code);
-    if (l.qty > bal) db.addExtra(o.emp, l.code, l.qty - bal); // raise approved qty list
-    db.addConsumption(o.emp, l.code, l.qty);
-  });
+  const { lines: balLines } = await balancesFor(o.emp, o.priceList);
+  for (const l of o.lines) {
+    const bal = balLines.find(x => x.code === l.code)?.balance ?? 0;
+    if (l.qty > bal) await store.addExtra(o.emp, l.code, l.qty - bal);   // raise approved qty list
+    await store.addConsumption(o.emp, l.code, l.qty);
+  }
   o.status = "in_progress";
   o.history.push({ at: new Date().toISOString(), ev: `Approved by ${req.user.name} (EGA) — approved qty list updated` });
   const r = await safeCall("createSalesOrder", o);
   if (r && r.soRef) { o.so = r.soRef; o.history.push({ at: new Date().toISOString(), ev: `ERP SO ${r.soRef} created` }); }
-  db.save();
+  await store.saveOrder(o);
   res.json(orderDTO(o));
-});
+}));
 
-app.post("/api/orders/:ref/reject", auth("approver"), (req, res) => {
-  const o = db.load().orders.find(x => x.ref === req.params.ref);
+app.post("/api/orders/:ref/reject", requireAuth("approver"), wrap(async (req, res) => {
+  const o = await store.getOrder(req.params.ref);
   if (!o || o.status !== "pending_approval") return res.status(422).json({ error: "Order is not awaiting approval" });
   o.status = "rejected";
   o.history.push({ at: new Date().toISOString(), ev: `Rejected by ${req.user.name} (EGA)${req.body?.reason ? " — " + req.body.reason : ""}` });
-  db.erpLog(`Order ${o.ref} rejected by ${req.user.name}`);
-  db.save();
+  await store.saveOrder(o);
+  await store.erpLog(`Order ${o.ref} rejected by ${req.user.name}`);
   res.json(orderDTO(o));
-});
+}));
 
-/* delivery note (admin) */
-app.post("/api/orders/:ref/delivery-note", auth("admin"), async (req, res) => {
-  const o = db.load().orders.find(x => x.ref === req.params.ref);
+app.post("/api/orders/:ref/delivery-note", requireAuth("admin"), wrap(async (req, res) => {
+  const o = await store.getOrder(req.params.ref);
   if (!o || o.status !== "in_progress") return res.status(422).json({ error: "Order has no open SO awaiting delivery" });
-  const dnRef = db.nextSeq("dn", "DO");
+  const dnRef = "DO" + (await store.nextSeq("dn"));
   const r = await safeCall("createDeliveryNote", o, dnRef);
   const finalRef = (r && r.dnRef) || dnRef;
   o.dns.push(finalRef);
   o.status = "do_created";
   o.history.push({ at: new Date().toISOString(), ev: `Delivery Note ${finalRef} created — delivery to the person` });
-  db.save();
+  await store.saveOrder(o);
   res.json(orderDTO(o));
-});
+}));
 
-/* receipt acknowledgement (employee) */
-app.post("/api/orders/:ref/receive", auth("employee"), (req, res) => {
-  const o = db.load().orders.find(x => x.ref === req.params.ref && x.emp === req.user.id);
-  if (!o) return res.status(404).json({ error: "Not found" });
+app.post("/api/orders/:ref/receive", requireAuth("employee"), wrap(async (req, res) => {
+  const o = await store.getOrder(req.params.ref);
+  if (!o || o.emp !== req.user.id) return res.status(404).json({ error: "Not found" });
   if (!["do_created", "partially_received"].includes(o.status))
     return res.status(422).json({ error: "Order is not awaiting receipt" });
   let any = false;
@@ -227,15 +275,14 @@ app.post("/api/orders/:ref/receive", auth("employee"), (req, res) => {
   const full = o.lines.every(l => l.received >= l.qty);
   o.status = full ? "complete" : "partially_received";
   o.history.push({ at: new Date().toISOString(), ev: full ? "Receipt acknowledged in full — order complete" : "Partial receipt acknowledged" });
-  db.erpLog(`Receipt acknowledgement for ${o.ref} (${full ? "full" : "partial"}) — order quantities updated`);
-  db.save();
+  await store.saveOrder(o);
+  await store.erpLog(`Receipt acknowledgement for ${o.ref} (${full ? "full" : "partial"}) — order quantities updated`);
   res.json(orderDTO(o));
-});
+}));
 
-/* material return (employee) */
-app.post("/api/orders/:ref/return", auth("employee"), async (req, res) => {
-  const o = db.load().orders.find(x => x.ref === req.params.ref && x.emp === req.user.id);
-  if (!o) return res.status(404).json({ error: "Not found" });
+app.post("/api/orders/:ref/return", requireAuth("employee"), wrap(async (req, res) => {
+  const o = await store.getOrder(req.params.ref);
+  if (!o || o.emp !== req.user.id) return res.status(404).json({ error: "Not found" });
   if (o.status !== "complete") return res.status(422).json({ error: "Only completed orders can be returned" });
   const retLines = [];
   for (const rl of req.body?.lines || []) {
@@ -245,59 +292,93 @@ app.post("/api/orders/:ref/return", auth("employee"), async (req, res) => {
     if (v > 0) retLines.push({ lineRef: l.lineRef, code: l.code, qty: v, uom: l.uom, price: l.price });
   }
   if (!retLines.length) return res.status(400).json({ error: "No returnable quantities supplied" });
-  const ref = db.nextSeq("ret", "RT");
-  retLines.forEach(rl => {
-    db.addConsumption(o.emp, rl.code, -rl.qty);
+  const ref = "RT" + (await store.nextSeq("ret"));
+  for (const rl of retLines) {
+    await store.addConsumption(o.emp, rl.code, -rl.qty);
     const ol = o.lines.find(x => x.lineRef === rl.lineRef);
     ol.received -= rl.qty; ol.qty -= rl.qty; ol.amount = +(ol.qty * ol.price).toFixed(2);
-  });
+  }
   o.total = +o.lines.reduce((s, l) => s + l.amount, 0).toFixed(2);
   o.history.push({ at: new Date().toISOString(), ev: `Return ${ref} submitted — approved qty list credited` });
-  const ret = { ref, at: new Date().toISOString(), order: o.ref, so: o.so, emp: o.emp, customer: o.customer,
-    lines: retLines, total: +retLines.reduce((s, l) => s + l.qty * l.price, 0).toFixed(2) };
-  await safeCall("postReturn", ret);
-  db.save();
+  await store.saveOrder(o);
+  await safeCall("postReturn", {
+    ref, at: new Date().toISOString(), order: o.ref, so: o.so, dn: o.dns[0] || null,
+    emp: o.emp, empName: o.empName, customer: o.customer, customerName: o.customerName,
+    lines: retLines, total: +retLines.reduce((s, l) => s + l.qty * l.price, 0).toFixed(2)
+  });
   res.json(orderDTO(o));
-});
+}));
 
-/* DO consolidation → invoice to EGA (admin) */
-app.post("/api/invoices/consolidate", auth("admin"), async (req, res) => {
-  const d = db.load();
-  const pend = d.erp.dn.filter(x => !x.invoiced);
+/* ══════════════════ INVOICING (admin) ══════════════════ */
+app.post("/api/invoices/consolidate", requireAuth("admin"), wrap(async (req, res) => {
+  const docs = await store.listErpDocs();
+  const pend = docs.dn.filter(d => !d.invoiced);
   if (!pend.length) return res.status(422).json({ error: "No delivery notes pending invoicing" });
   const byCust = {};
-  pend.forEach(x => { (byCust[x.customer] = byCust[x.customer] || []).push(x); });
+  pend.forEach(d => { (byCust[d.customer] = byCust[d.customer] || []).push(d); });
   const created = [];
   for (const [cid, dns] of Object.entries(byCust)) {
-    const ref = db.nextSeq("inv", "INV");
-    const lines = dns.flatMap(x => x.lines);
-    const inv = { ref, at: new Date().toISOString(), customer: cid, dns: dns.map(x => x.ref),
-      lines, total: +dns.reduce((s, x) => s + x.total, 0).toFixed(2) };
+    const ref = "INV" + (await store.nextSeq("inv"));
+    const inv = {
+      ref, at: new Date().toISOString(), customer: cid, customerName: dns[0].customerName,
+      dns: dns.map(d => d.ref), lines: dns.flatMap(d => d.lines),
+      total: +dns.reduce((s, d) => s + d.total, 0).toFixed(2)
+    };
     await safeCall("postInvoice", inv);
-    dns.forEach(x => { x.invoiced = true; });
+    for (const d of dns) await store.updateErpDoc("dn", d.ref, { invoiced: true });
     created.push(inv);
   }
-  db.save();
   res.json({ invoices: created });
-});
+}));
 
-/* ---------------- ERP console & masters (admin) ---------------- */
-app.get("/api/erp/documents", auth("admin", "approver"), (req, res) => {
-  res.json(db.load().erp);
-});
-app.get("/api/masters", auth("admin"), (req, res) => {
-  const d = db.load();
-  res.json({
-    customers: d.customers, departments: d.departments, locations: d.locations,
-    uoms: d.uoms, items: d.items, priceLists: d.priceLists,
-    employees: d.employees.map(({ pin, ...e }) => e)
+/* ══════════════════ ADMIN: users & masters, ERP console ══════════════════ */
+app.get("/api/admin/users", requireAuth("admin"), wrap(async (req, res) => {
+  res.json((await store.listProfiles()).map(pub));
+}));
+
+app.patch("/api/admin/users/:id", requireAuth("admin"), wrap(async (req, res) => {
+  const allowed = ["role", "customer", "dept", "priceList", "active", "empId", "name", "phone"];
+  const patch = {};
+  for (const k of allowed) if (k in (req.body || {})) patch[k] = req.body[k];
+  if (patch.role && !["employee", "approver", "admin"].includes(patch.role))
+    return res.status(400).json({ error: "role must be employee|approver|admin" });
+  const p = await store.updateProfile(req.params.id, patch);
+  if (!p) return res.status(404).json({ error: "User not found" });
+  res.json(pub(p));
+}));
+
+app.delete("/api/admin/users/:id", requireAuth("admin"), wrap(async (req, res) => {
+  if (req.params.id === req.user.id) return res.status(400).json({ error: "Use account deletion for your own account" });
+  await authsvc.deleteAccount(req.params.id);
+  res.json({ ok: true });
+}));
+
+app.get("/api/masters", requireAuth("admin", "approver"), wrap(async (req, res) => {
+  res.json(await masters());
+}));
+
+app.get("/api/erp/documents", requireAuth("admin", "approver"), wrap(async (req, res) => {
+  res.json(await store.listErpDocs());
+}));
+
+app.get("/api/health", wrap(async (req, res) => {
+  res.json({ ok: true, storage: store.mode, auth: authsvc.SUPA ? "supabase" : "local-demo", erp: process.env.ERP_PROVIDER || "focus9-stub" });
+}));
+
+/* ══════════════════ boot ══════════════════ */
+if (require.main === module) {
+  // Run as a normal server (local dev / VPS). On Vercel this file is imported
+  // by api/index.js instead and requests are handled serverlessly.
+  store.init().then(() => {
+    app.listen(PORT, () => {
+      console.log(`PROSAFE middleware v2 on http://0.0.0.0:${PORT}`);
+      console.log(`  storage: ${store.mode}   auth: ${authsvc.SUPA ? "supabase" : "local-demo (password: prosafe1)"}   erp: ${process.env.ERP_PROVIDER || "focus9-stub"}`);
+    });
+  }).catch(e => {
+    console.error("Store init failed:", e.message);
+    console.error("If using Supabase: run supabase/schema.sql and seed.sql in the SQL editor first.");
+    process.exit(1);
   });
-});
-app.post("/api/admin/reset-demo", auth("admin"), (req, res) => { db.reset(); res.json({ ok: true }); });
+}
 
-app.get("/api/health", (req, res) => res.json({ ok: true, erp: process.env.ERP_PROVIDER || "focus9-stub" }));
-
-app.listen(PORT, () => {
-  db.load();
-  console.log(`PROSAFE middleware listening on http://0.0.0.0:${PORT}  (ERP: ${process.env.ERP_PROVIDER || "focus9-stub"})`);
-});
+module.exports = app;

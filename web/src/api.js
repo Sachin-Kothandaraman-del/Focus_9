@@ -1,28 +1,17 @@
-import * as SecureStore from "expo-secure-store";
-import { API_URL } from "./config";
+const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-let token = null;
-let refreshToken = null;
+let token = localStorage.getItem("jwt") || null;
+let refreshToken = localStorage.getItem("jwt_refresh") || null;
 
-export async function loadSession() {
-  try {
-    token = await SecureStore.getItemAsync("jwt");
-    refreshToken = await SecureStore.getItemAsync("jwt_refresh");
-  } catch (e) { token = null; refreshToken = null; }
-  return token;
-}
-export async function setSession(t, rt) {
+export function setSession(t, rt) {
   token = t; refreshToken = rt || null;
-  try {
-    if (t) await SecureStore.setItemAsync("jwt", t);
-    else await SecureStore.deleteItemAsync("jwt");
-    if (rt) await SecureStore.setItemAsync("jwt_refresh", rt);
-    else await SecureStore.deleteItemAsync("jwt_refresh");
-  } catch (e) {}
+  if (t) localStorage.setItem("jwt", t); else localStorage.removeItem("jwt");
+  if (rt) localStorage.setItem("jwt_refresh", rt); else localStorage.removeItem("jwt_refresh");
 }
+export function hasSession() { return !!token; }
 
 async function rawFetch(path, method, body) {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API}${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
@@ -37,13 +26,11 @@ async function rawFetch(path, method, body) {
 
 export async function api(path, { method = "GET", body } = {}) {
   let { res, data } = await rawFetch(path, method, body);
-
-  // access token expired → try one refresh, then retry the request
   if (res.status === 401 && data && data.expired && refreshToken) {
     try {
       const r = await rawFetch("/api/auth/refresh", "POST", { refreshToken });
       if (r.res.ok && r.data && r.data.token) {
-        await setSession(r.data.token, r.data.refreshToken || refreshToken);
+        setSession(r.data.token, r.data.refreshToken || refreshToken);
         ({ res, data } = await rawFetch(path, method, body));
       }
     } catch (e) {}

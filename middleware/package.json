@@ -1,14 +1,16 @@
 {
   "name": "prosafe-ega-middleware",
-  "version": "1.0.0",
-  "description": "Middleware / Business Logic Layer between PROSAFE EGA mobile app and ERP (Focus9 / ERPNext)",
+  "version": "2.0.0",
+  "description": "Middleware: PROSAFE EGA apps - Supabase - ERP (ERPNext live / Focus9 stub)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "seed-erpnext": "node erp/seed-erpnext.js"
   },
   "engines": { "node": ">=18" },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",

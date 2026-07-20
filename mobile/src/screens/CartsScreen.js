@@ -94,7 +94,7 @@ export default function CartsScreen({ navigation }) {
               </Text>
               <Card>
                 <Text style={s.kv}>Contract Ref: <Text style={s.b}>{catalog?.priceList.contract}</Text></Text>
-                <Text style={s.kv}>Employee: <Text style={s.b}>{user?.id} — {user?.name}</Text></Text>
+                <Text style={s.kv}>Employee: <Text style={s.b}>{user?.empId} — {user?.name}</Text></Text>
                 <Text style={s.kv}>Department: <Text style={s.b}>{user?.dept}</Text></Text>
                 <Text style={[s.kv, { color: C.mut, fontSize: 11 }]}>Doc Ref & line numbers are assigned by the system on placing.</Text>
               </Card>

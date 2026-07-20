@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Alert } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { api } from "../api";
 import { useStore } from "../store";
@@ -7,24 +7,48 @@ import { Card, Btn, Chip, KV, Loading } from "../components";
 import { C } from "../theme";
 
 export default function ProfileScreen() {
-  const { logout } = useStore();
+  const { logout, deleteAccount } = useStore();
   const [p, setP] = useState(null);
 
   useFocusEffect(useCallback(() => {
     (async () => { try { setP(await api("/api/profile")); } catch (e) {} })();
   }, []));
 
+  function confirmDelete() {
+    Alert.alert(
+      "Delete account",
+      "This permanently deletes your account and personal data. Past orders remain in the business records. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete my account", style: "destructive",
+          onPress: () => Alert.alert("Are you sure?", "Final confirmation — delete your account permanently?", [
+            { text: "Keep my account", style: "cancel" },
+            {
+              text: "Yes, delete", style: "destructive",
+              onPress: async () => {
+                try { await deleteAccount(); }
+                catch (e) { Alert.alert("Could not delete account", e.message); }
+              }
+            }
+          ])
+        }
+      ]
+    );
+  }
+
   if (!p) return <Loading />;
 
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }}>
       <Card>
-        <KV k="Employee ID" v={p.user.id} />
+        <KV k="Employee ID" v={p.user.empId || "—"} />
         <KV k="Name" v={p.user.name} />
+        <KV k="E-mail" v={p.user.email} />
         <KV k="Company" v={p.customer?.name || "—"} />
         <KV k="Department" v={p.user.dept || "—"} />
-        <KV k="Mobile" v={p.user.phone} />
-        <KV k="E-mail" v={p.user.email} />
+        <KV k="Mobile" v={p.user.phone || "—"} />
+        <KV k="Role" v={p.user.role} />
         <KV k="Approved Price List" v={p.priceList ? `${p.priceList.name} · Contract ${p.priceList.contract}` : "—"} />
       </Card>
 
@@ -56,7 +80,12 @@ export default function ProfileScreen() {
           </Card>
         </>
       )}
+
       <Btn title="Sign out" color={C.navy} onPress={logout} />
+      <Btn title="🗑 Delete my account" color={C.red} onPress={confirmDelete} />
+      <Text style={{ fontSize: 10, color: C.mut, textAlign: "center", marginTop: 8 }}>
+        Deleting removes your login and personal data permanently.
+      </Text>
     </ScrollView>
   );
 }

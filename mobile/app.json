@@ -5,7 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "platforms": ["android", "ios"],
+    "platforms": [
+      "android",
+      "ios"
+    ],
     "splash": {
       "backgroundColor": "#0f2a43"
     },
@@ -21,10 +24,8 @@
       "bundleIdentifier": "com.prosafe.egaorders",
       "supportsTablet": false
     },
-    "extra": {
-      "eas": {
-        "projectId": "REPLACED-AUTOMATICALLY-BY-eas-init"
-      }
-    }
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
