@@ -19,7 +19,14 @@
 --     model (stock reservation, line-key allocations, DOD lines).
 -- ═══════════════════════════════════════════════════════════════════
 
--- 1 ── profiles: add SRS2 columns, keep the accounts
+-- 1 ── profiles: detach v2 foreign keys, add SRS2 columns, keep the accounts
+--      (v2 linked profiles to the old master tables; v3 validates in the
+--       middleware instead, so these constraints go away)
+alter table profiles drop constraint if exists profiles_price_list_fkey;
+alter table profiles drop constraint if exists profiles_customer_fkey;
+alter table profiles drop constraint if exists profiles_dept_fkey;
+alter table profiles drop constraint if exists profiles_location_fkey;
+
 alter table profiles add column if not exists location    text;
 alter table profiles add column if not exists price_lists jsonb not null default '[]';
 alter table profiles add column if not exists from_store  text;
@@ -28,20 +35,21 @@ alter table profiles add column if not exists to_store    text;
 -- reset shopping assignments (old PL ids don't match the new price lists)
 update profiles set price_list = null, price_lists = '[]'::jsonb;
 
--- 2 ── drop v2 master tables (replaced by the `masters` table in v3)
-drop table if exists price_list_lines;
-drop table if exists price_lists;
-drop table if exists items;
-drop table if exists uoms;
-drop table if exists locations;
-drop table if exists departments;
-drop table if exists customers;
+-- 2 ── clear v2 transactional data (incompatible with the SRS2 model)
+drop table if exists orders cascade;
+drop table if exists erp_docs cascade;
+drop table if exists erp_log cascade;
+drop table if exists allocations cascade;
+drop table if exists seqs cascade;
 
--- 3 ── clear v2 transactional data (incompatible with the SRS2 model)
-drop table if exists orders;
-drop table if exists erp_docs;
-drop table if exists erp_log;
-drop table if exists allocations;
-drop table if exists seqs;
+-- 3 ── drop v2 master tables (replaced by the `masters` table in v3);
+--      CASCADE removes any remaining constraints that point at them
+drop table if exists price_list_lines cascade;
+drop table if exists price_lists cascade;
+drop table if exists items cascade;
+drop table if exists uoms cascade;
+drop table if exists locations cascade;
+drop table if exists departments cascade;
+drop table if exists customers cascade;
 
 -- Done. Now run schema.sql, then seed.sql.
