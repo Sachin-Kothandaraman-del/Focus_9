@@ -24,19 +24,42 @@ async function call(method, resource, body) {
 }
 
 async function createSalesOrder(order) {
+  const lines = order.lines.filter(l => (l.approvedQty ?? l.qty) > 0);
+  const dated = lines.map(l => l.deliveryDate).filter(Boolean).sort();
   const data = await call("POST", "Sales Order", {
     customer: order.customerName,
     po_no: order.ref,
-    delivery_date: new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10),
-    items: order.lines.map(l => ({ item_code: l.code, qty: l.qty, rate: l.price, uom: l.uom }))
+    delivery_date: dated[0] || new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10),
+    items: lines.map(l => ({
+      item_code: l.code, qty: l.approvedQty ?? l.qty, rate: l.price, uom: l.uom,
+      delivery_date: l.deliveryDate || undefined,
+      description: l.remark || undefined
+    }))
   });
   await store.addErpDoc("so", {
     ref: data.name, at: new Date().toISOString(), order: order.ref, emp: order.emp, empName: order.empName,
     customer: order.customer, customerName: order.customerName, contract: order.contract,
-    lines: order.lines.map(l => ({ ...l })), total: order.total, status: "Open"
+    lines: lines.map(l => ({ ...l, qty: l.approvedQty ?? l.qty })), total: order.total, status: "Open"
   });
   await store.erpLog(`ERPNext: Sales Order ${data.name} created for app order ${order.ref}`);
   return { soRef: data.name };
+}
+
+async function updateSalesOrderPlanning(order) {
+  const dated = order.lines.map(l => l.deliveryDate).filter(Boolean).sort();
+  if (dated.length) {
+    const url = `${process.env.ERPNEXT_URL}/api/resource/Sales%20Order/${encodeURIComponent(order.so)}`;
+    const res = await fetch(url, {
+      method: "PUT", headers: headers(), body: JSON.stringify({ delivery_date: dated[0] })
+    });
+    if (!res.ok) throw new Error(`ERPNext update Sales Order ${order.so} → HTTP ${res.status}`);
+  }
+  await store.updateErpDoc("so", order.so, {
+    lines: order.lines.filter(l => (l.approvedQty ?? l.qty) > 0)
+      .map(l => ({ ...l, qty: l.approvedQty ?? l.qty }))
+  });
+  await store.erpLog(`ERPNext: delivery planning updated for ${order.so}`);
+  return { ok: true };
 }
 
 async function cancelSalesOrder(soRef) {
@@ -50,28 +73,64 @@ async function cancelSalesOrder(soRef) {
   return { ok: true };
 }
 
-async function createDeliveryNote(order, dnRef) {
+async function createDeliveryNote(order, delivery) {
   const data = await call("POST", "Delivery Note", {
     customer: order.customerName,
-    items: order.lines.map(l => ({ item_code: l.code, qty: l.qty, rate: l.price, uom: l.uom, against_sales_order: order.so }))
+    items: delivery.lines.map(l => ({
+      item_code: l.code, qty: l.qty, rate: l.price, uom: l.uom,
+      against_sales_order: order.so
+    }))
   });
   await store.addErpDoc("dn", {
-    ref: data.name, at: new Date().toISOString(), order: order.ref, so: order.so,
+    ref: data.name, at: delivery.at, order: order.ref, so: order.so,
     emp: order.emp, empName: order.empName, customer: order.customer, customerName: order.customerName,
-    lines: order.lines.map(l => ({ ...l })), total: order.total, invoiced: false
+    lines: delivery.lines.map(l => ({ ...l })), total: delivery.total, invoiced: false
   });
   await store.erpLog(`ERPNext: Delivery Note ${data.name} created against SO ${order.so}`);
   return { dnRef: data.name };
 }
 
+async function createStockTransfer(stv) {
+  // Maps to an ERPNext "Stock Entry" (Material Transfer) between warehouses.
+  // Requires warehouses named after the app's store codes; adjust to your site.
+  try {
+    const data = await call("POST", "Stock Entry", {
+      stock_entry_type: "Material Transfer",
+      items: stv.lines.map(l => ({
+        item_code: l.code, qty: l.qty,
+        s_warehouse: stv.from, t_warehouse: stv.to
+      }))
+    });
+    await store.erpLog(`ERPNext: Stock Entry ${data.name} (${stv.from} → ${stv.to}) for ${stv.order || "manual transfer"}`);
+    return { stvRef: data.name };
+  } catch (e) {
+    await store.erpLog(`ERPNext: Stock Transfer ${stv.ref} mirrored locally only (${e.message})`);
+    return { stvRef: stv.ref };
+  }
+}
+
 async function postReturn(ret) {
   const data = await call("POST", "Delivery Note", {
-    customer: ret.customerName, is_return: 1, return_against: ret.dn,
+    customer: ret.customerName, is_return: 1, ...(ret.dn ? { return_against: ret.dn } : {}),
     items: ret.lines.map(l => ({ item_code: l.code, qty: -l.qty, rate: l.price, uom: l.uom }))
   });
-  await store.addErpDoc("ret", { ...ret, erpRef: data.name, status: "Posted" });
+  await store.addErpDoc("ret", { ...ret, erpRef: data.name, status: ret.status || "Posted" });
   await store.erpLog(`ERPNext: Return ${data.name} posted for order ${ret.order}`);
   return { ok: true };
+}
+
+async function postCreditNote(cn) {
+  try {
+    const data = await call("POST", "Sales Invoice", {
+      customer: cn.customerName, is_return: 1,
+      items: cn.lines.map(l => ({ item_code: l.code, qty: -l.qty, rate: l.price, uom: l.uom }))
+    });
+    await store.erpLog(`ERPNext: Credit Note ${data.name} issued against return ${cn.rma}`);
+    return { cnRef: data.name };
+  } catch (e) {
+    await store.erpLog(`ERPNext: Credit Note ${cn.ref} mirrored locally only (${e.message})`);
+    return { cnRef: cn.ref };
+  }
 }
 
 async function postInvoice(inv) {
@@ -84,4 +143,7 @@ async function postInvoice(inv) {
   return { ok: true };
 }
 
-module.exports = { createSalesOrder, cancelSalesOrder, createDeliveryNote, postReturn, postInvoice };
+module.exports = {
+  createSalesOrder, updateSalesOrderPlanning, cancelSalesOrder,
+  createDeliveryNote, createStockTransfer, postReturn, postCreditNote, postInvoice
+};

@@ -1,7 +1,9 @@
 # PROSAFE × EGA — Production Full-Stack Ordering Platform
 
 Mobile app (Google Play-ready) + Website + Middleware + Supabase database/auth + ERPNext integration.
-Built from your SRS (Mobile App SRS1 08-07-26), security, licensing and flow-chart documents.
+Built from your SRS documents — now upgraded to **Mobile App SRS2 (25-08-26)** with the real master
+data from the *Data List* Excel workbooks (Master List, Price List PL1–PL3, Store Inventory,
+Groups & Categories).
 
 ```
 ┌──────────────────┐
@@ -16,7 +18,7 @@ Built from your SRS (Mobile App SRS1 08-07-26), security, licensing and flow-cha
    web/                                       middleware/
 ```
 
-**Features**: e-mail/password **account creation**, **login**, **account deletion** (Play Store requirement) · self-signup with **admin activation** (admin assigns company, department, price list) · shopping restricted to approved price lists · allocation limits · Order vs Approval carts · EGA approval workflow · 15-min cancel window · delivery notes · receipt acknowledgement · returns · DO-consolidated invoicing · role-based access (employee / approver / admin) · full masters per SRS.
+**Features (SRS2, 25-08-26)**: e-mail/password **account creation**, **login**, **account deletion** (Play Store requirement) · self-signup with **admin activation** (customer, department, location, **multiple price lists** = multiple shopping tabs, From/To stores) · full masters incl. **Contracts, Divisions, Stores (Main + Reservation), Groups & Categories** with an admin Masters editor · price lists with **validity dates + delivery period** and size-variant lines sharing one allocation · shopping screen header with **Total Allocated / Total Used Amounts** · live **Main-store stock** on every item · server-side carts that **reserve stock on picking with a 10-minute window** (expiry releases stock) · within-limit → Order Cart, over-limit → Approval Cart (both debit Used Qty) · order placement **stock-transfers reserved qtys Main → Reservation store** (Issue + Receipt vouchers) · **delivery-date rules** (order date + delivery period / "DOD to be advised" / partial-stock line split) · **3-day approval window** with auto-cancel · **Re-save** (single + bulk) to fill DOD lines when stock arrives, with employee notifications · DOs issued **from the Reservation store** with employee acknowledgement (Receipt Voucher process removed) · **returns within 3 days of receipt** with store **Return Confirmation** crediting the price list + Main store and raising a **Credit Note** · balance cancellation by Stores · DO-consolidated invoicing · per-store **inventory screen** with manual adjustments & transfers · role-based access (employee / approver / admin).
 
 **Two run modes** (auto-detected): leave Supabase keys empty → **local demo mode** (JSON DB, demo logins, password `prosafe1`); fill them in → **production mode** (Supabase Postgres + Supabase Auth).
 
@@ -85,7 +87,7 @@ ERPNEXT_URL=https://your-site.erpnext.com
 ERPNEXT_API_KEY=…
 ERPNEXT_API_SECRET=…
 ```
-Prerequisites on the ERPNext site: an API user with key/secret, **items with the same item codes** (PPE-SHOE-42, …) and **customers with the same names** (Dubal, Emal, …) as the seed masters. Then real Sales Orders, Delivery Notes, Returns and Sales Invoices are created in ERPNext (also mirrored into Supabase for in-app display). Focus9: keep `ERP_PROVIDER=focus9-stub`; replace the marked TODOs in `middleware/erp/focus9.js` when Focus Softnet provides API docs.
+Prerequisites on the ERPNext site: an API user with key/secret, **items with the same item codes** (HPHTPE0001, …), **customers with the same names** (Dubai Aluminum, Emirates Aluminum) and **warehouses named after the store codes** (EGAMS, EGADR, EGAER) as the seed masters. Then real Sales Orders, Delivery Notes, Returns and Sales Invoices are created in ERPNext (also mirrored into Supabase for in-app display). Focus9: keep `ERP_PROVIDER=focus9-stub`; replace the marked TODOs in `middleware/erp/focus9.js` when Focus Softnet provides API docs.
 
 ## 7. Publish to Google Play
 
@@ -102,6 +104,25 @@ Prerequisites on the ERPNext site: an API user with key/secret, **items with the
    - **Account deletion**: the app has in-app deletion (Profile → Delete my account) — Google requires this and it's already implemented. You must also provide a web deletion URL: your deployed website's profile page qualifies.
 4. Internal testing → Production → review (1–3 days).
 
+## Deploying updates (GitHub + Vercel)
+
+Code lives at https://github.com/Sachin-Kothandaraman-del/Focus_9 · web: https://prosafe-ega-web.vercel.app · middleware: https://prosafe-ega-middleware.vercel.app
+
+1. **Migrate the Supabase database to the SRS2 model (one-time, before deploying v3)** —
+   Supabase → SQL Editor, run in order: `middleware/supabase/migrate-v2-to-v3.sql` →
+   `schema.sql` → `seed.sql`. User accounts are kept; re-assign each employee's price
+   lists and stores afterwards in **Users → Set up**.
+2. **Push to GitHub**: `git add -A && git commit -m "…" && git push origin main`
+   (`.gitignore` keeps `.env*`, `.vercel/`, `node_modules/`, `middleware/data/` out of the repo).
+3. **Redeploy Vercel** — either run `vercel --prod` inside `middleware/` and again inside
+   `web/` (the folders are already linked to the `prosafe-ega-middleware` / `prosafe-ega-web`
+   projects), **or** connect the GitHub repo once in the Vercel dashboard
+   (each project → Settings → Git → Connect `Focus_9`, and set **Root Directory** to
+   `middleware` resp. `web`) so every push auto-deploys.
+4. Vercel env vars (already set from the first deploy — verify after big changes):
+   middleware needs `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+   `JWT_SECRET`, `ADMIN_EMAILS`; web needs `VITE_API_URL=https://prosafe-ega-middleware.vercel.app`.
+
 ## Production hardening checklist
 
 HTTPS everywhere (middleware behind nginx/Caddy or a PaaS with TLS) · strong `JWT_SECRET` · keep `service_role` key **only** on the server · re-enable Supabase e-mail confirmation · add rate limiting (`express-rate-limit`) · Supabase automatic backups are on by default · rotate ERPNext API keys periodically · monitor the ERP event log (Fulfilment → API/Event Log) for flagged sync failures.
@@ -110,14 +131,14 @@ HTTPS everywhere (middleware behind nginx/Caddy or a PaaS with TLS) · strong `J
 
 ```
 prosafe-app/
-├── middleware/                 Node.js business-logic layer (v2)
+├── middleware/                 Node.js business-logic layer (v3 — SRS2 25-08-26)
 │   ├── server.js               REST API — auth, orders, approvals, fulfilment, admin
 │   ├── auth.js                 signup / login / refresh / account deletion (Supabase Auth or local)
 │   ├── store/                  supabase.js (Postgres) · local.js (JSON demo) · seed-data.js
 │   ├── erp/                    erpnext.js (live) · focus9.js (stub) · index.js (selector + retry)
 │   └── supabase/               schema.sql · seed.sql  (paste into Supabase SQL editor)
 ├── web/                        React + Vite portal (all roles) → deploy dist/ anywhere
-│   └── src/pages/              Auth · Shop · Carts · Orders · Approvals · Fulfilment · Users · Profile
+│   └── src/pages/              Auth · Shop · Carts · Orders · Approvals · Fulfilment · Inventory · Masters · Users · Profile (My Limits)
 └── mobile/                     Expo React Native app (Android + iOS)
     └── src/screens/            Login/Signup · Shop · Carts · Orders · Detail · Profile(+delete) · Approvals · Fulfilment
 ```

@@ -1,10 +1,13 @@
 /**
  * ERP adapter selector. .env ERP_PROVIDER: focus9-stub (default) | erpnext
- * Adapter interface:
+ * Adapter interface (SRS2):
  *   createSalesOrder(order) → { soRef }
+ *   updateSalesOrderPlanning(order)
  *   cancelSalesOrder(soRef)
- *   createDeliveryNote(order, dnRef) → { dnRef }
+ *   createDeliveryNote(order, delivery) → { dnRef }
+ *   createStockTransfer(stv) → { stvRef }     (Issue + Receipt vouchers)
  *   postReturn(ret)
+ *   postCreditNote(cn) → { cnRef }
  *   postInvoice(inv)
  */
 const store = require("../store");

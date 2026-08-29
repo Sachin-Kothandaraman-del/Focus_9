@@ -7,6 +7,7 @@ export const C = {
 export const STATUS = {
   pending_approval:   { label: "Order Approval",       color: C.amber },
   in_progress:        { label: "Order in Progress",    color: C.blue },
+  partially_delivered:{ label: "Partially Delivered",  color: "#6f52a2" },
   do_created:         { label: "DO Created — Receive", color: C.navy },
   partially_received: { label: "Partially Received",   color: C.orange },
   complete:           { label: "Order Complete",       color: C.green },

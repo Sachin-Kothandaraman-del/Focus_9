@@ -1,76 +1,145 @@
--- Generated from store/seed-data.js — run AFTER schema.sql
+-- ═══════════════════════════════════════════════════════════════════
+-- PROSAFE × EGA — Supabase seed  v3 (SRS2 25-08-26, from the Data List Excel workbooks)
+-- Run AFTER schema.sql. Safe to re-run: upserts by primary key.
+-- ═══════════════════════════════════════════════════════════════════
 
-insert into customers (id, name, address, phone, email) values
-  ('C01', 'Dubal', 'Jebel Ali, Dubai, UAE', '+971-4-8021111', 'stores@dubal.ae'),
-  ('C02', 'DXB Power Plant', 'Al Aweer, Dubai, UAE', '+971-4-6081234', 'procurement@dxbpower.ae'),
-  ('C03', 'Emal', 'Al Taweelah, Abu Dhabi, UAE', '+971-2-5092000', 'stores@emal.ae'),
-  ('C04', 'TWA Power Plant', 'Taweelah, Abu Dhabi, UAE', '+971-2-5093500', 'power.stores@twa.ae'),
-  ('C05', 'TWA Refinery', 'Taweelah, Abu Dhabi, UAE', '+971-2-5094100', 'refinery.stores@twa.ae')
-on conflict (id) do nothing;
+-- masters
+insert into masters (kind, id, data) values ('customers', 'C01', '{"id":"C01","name":"Dubai Aluminum","address":"P. O. Box 1234, Dubai - UAE","phone":"+971 4 223xxxx","fax":"+971 4 414xxxx","email":"dubal@gmail.com"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('customers', 'C02', '{"id":"C02","name":"Emirates Aluminum","address":"P. O. Box 5678, Abu Dhabi - UAE","phone":"+971 2 323xxxx","fax":"+971 4 512xxxx","email":"emal@gmail.com"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('contracts', '50002834', '{"ref":"50002834","customer":"C01","value":500000,"start":"2026-08-10","end":"2027-08-09"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('contracts', '60008792', '{"ref":"60008792","customer":"C02","value":450000,"start":"2026-08-20","end":"2027-08-19"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('departments', 'PLDA', '{"code":"PLDA","name":"Pot Line Dubal"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('departments', 'EGDA', '{"code":"EGDA","name":"Engineering Dubal"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('departments', 'MNDA', '{"code":"MNDA","name":"Maintenance Dubal"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('departments', 'PLEA', '{"code":"PLEA","name":"Pot Line Emal"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('departments', 'EGEA', '{"code":"EGEA","name":"Engineering Emal"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('departments', 'MNEA', '{"code":"MNEA","name":"Maintenance Emal"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('locations', 'DA001', '{"code":"DA001","name":"Dubal1"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('locations', 'DA002', '{"code":"DA002","name":"Dubal2"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('locations', 'DA003', '{"code":"DA003","name":"Dubal3"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('locations', 'EA001', '{"code":"EA001","name":"Emal1"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('locations', 'EA002', '{"code":"EA002","name":"Emal2"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('locations', 'EA003', '{"code":"EA003","name":"Emal3"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('divisions', 'PSSEGA', '{"code":"PSSEGA","name":"Prosafe EGA"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('divisions', 'PSSGNS', '{"code":"PSSGNS","name":"Prosafe General"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('stores', 'EGAMS', '{"code":"EGAMS","name":"EGA Main Store","division":"PSSEGA","type":"main"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('stores', 'EGADR', '{"code":"EGADR","name":"Dubal Reservation Store","division":"PSSEGA","type":"reservation"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('stores', 'EGAER', '{"code":"EGAER","name":"Emal Reservation Store","division":"PSSEGA","type":"reservation"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('groups', 'HP', '{"code":"HP","name":"Head Protection"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('groups', 'EF', '{"code":"EF","name":"Eye & Face Protection"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('groups', 'RP', '{"code":"RP","name":"Respiratory Protection"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('groups', 'PC', '{"code":"PC","name":"Protective Clothing"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('groups', 'GL', '{"code":"GL","name":"Gloves"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('groups', 'FW', '{"code":"FW","name":"Foot Wear"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'HT', '{"code":"HT","name":"Hard Hat"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'SP', '{"code":"SP","name":"Spectacle"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'GG', '{"code":"GG","name":"Goggle"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'DM', '{"code":"DM","name":"Dust Mask"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'CV', '{"code":"CV","name":"Coverall"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'ST', '{"code":"ST","name":"Shirt"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'TR', '{"code":"TR","name":"Trouser"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'VS', '{"code":"VS","name":"Vest"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'HR', '{"code":"HR","name":"Heat Resistant"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'GP', '{"code":"GP","name":"General Purpose"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('categories', 'HM', '{"code":"HM","name":"Hot Metal"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'HPHTPE0001', '{"desc":"Hart Hat, Green","alias":"Hart Hat, Green","code":"HPHTPE0001","name":"Hart Hat, Green","uom":"PCS","group":"HP","cat":"HT","pic":"⛑️"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'HPHTPE0002', '{"desc":"Hart Hat, Red","alias":"Hart Hat, Red","code":"HPHTPE0002","name":"Hart Hat, Red","uom":"PCS","group":"HP","cat":"HT","pic":"⛑️"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'HPHTPE0003', '{"desc":"Hart Hat, Blue","alias":"Hart Hat, Blue","code":"HPHTPE0003","name":"Hart Hat, Blue","uom":"PCS","group":"HP","cat":"HT","pic":"⛑️"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'EFSPPC0001', '{"desc":"Safety Spectacle, Clear","alias":"Safety Spectacle, Clear","code":"EFSPPC0001","name":"Safety Spectacle, Clear","uom":"PCS","group":"EF","cat":"SP","pic":"🥽"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'EFSPPC0002', '{"desc":"Safety Spectacle, Grey","alias":"Safety Spectacle, Grey","code":"EFSPPC0002","name":"Safety Spectacle, Grey","uom":"PCS","group":"EF","cat":"SP","pic":"🥽"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'EFGGNY0001', '{"desc":"Impact Goggle","alias":"Impact Goggle","code":"EFGGNY0001","name":"Impact Goggle","uom":"PCS","group":"EF","cat":"GG","pic":"🥽"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'RPDM950001', '{"desc":"N95 Dust Mask, 20 pcs/pkt","alias":"N95 Dust Mask, 20 pcs/pkt","code":"RPDM950001","name":"N95 Dust Mask, 20 pcs/pkt","uom":"PKT","group":"RP","cat":"DM","pic":"😷"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCCVCT0001', '{"desc":"100% Cotton Coverall, Royal Blue, Size - Medium","alias":"100% Cotton Coverall, Royal Blue, Size - Medium","code":"PCCVCT0001","name":"100% Cotton Coverall, Royal Blue, Size - Medium","uom":"PCS","group":"PC","cat":"CV","pic":"🦺"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCCVCT0002', '{"desc":"100% Cotton Coverall, Royal Blue, Size - Large","alias":"100% Cotton Coverall, Royal Blue, Size - Large","code":"PCCVCT0002","name":"100% Cotton Coverall, Royal Blue, Size - Large","uom":"PCS","group":"PC","cat":"CV","pic":"🦺"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCCVCT0003', '{"desc":"100% Cotton Coverall, Royal Blue, Size - X Large","alias":"100% Cotton Coverall, Royal Blue, Size - X Large","code":"PCCVCT0003","name":"100% Cotton Coverall, Royal Blue, Size - X Large","uom":"PCS","group":"PC","cat":"CV","pic":"🦺"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCSHHM0001', '{"desc":"Hot Metal Shirt, Medium Blue, Size - Medium","alias":"Hot Metal Shirt, Medium Blue, Size - Medium","code":"PCSHHM0001","name":"Hot Metal Shirt, Medium Blue, Size - Medium","uom":"PCS","group":"PC","cat":"ST","pic":"👕"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCSHHM0002', '{"desc":"Hot Metal Shirt, Medium Blue, Size - Large","alias":"Hot Metal Shirt, Medium Blue, Size - Large","code":"PCSHHM0002","name":"Hot Metal Shirt, Medium Blue, Size - Large","uom":"PCS","group":"PC","cat":"ST","pic":"👕"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCSHHM0003', '{"desc":"Hot Metal Shirt, Medium Blue, Size - X Large","alias":"Hot Metal Shirt, Medium Blue, Size - X Large","code":"PCSHHM0003","name":"Hot Metal Shirt, Medium Blue, Size - X Large","uom":"PCS","group":"PC","cat":"ST","pic":"👕"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCSHCT0001', '{"desc":"Poly Cotton Work Shirt, Khaki, Size - Medium","alias":"Poly Cotton Work Shirt, Khaki, Size - Medium","code":"PCSHCT0001","name":"Poly Cotton Work Shirt, Khaki, Size - Medium","uom":"PCS","group":"PC","cat":"ST","pic":"👕"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCSHCT0002', '{"desc":"Poly Cotton Work Shirt, Khaki, Size - Large","alias":"Poly Cotton Work Shirt, Khaki, Size - Large","code":"PCSHCT0002","name":"Poly Cotton Work Shirt, Khaki, Size - Large","uom":"PCS","group":"PC","cat":"ST","pic":"👕"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCSHCT0003', '{"desc":"Poly Cotton Work Shirt, Khaki, Size - X Large","alias":"Poly Cotton Work Shirt, Khaki, Size - X Large","code":"PCSHCT0003","name":"Poly Cotton Work Shirt, Khaki, Size - X Large","uom":"PCS","group":"PC","cat":"ST","pic":"👕"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCTRHM0001', '{"desc":"Hot Metal Trouser, Medium Blue, Size - 30","alias":"Hot Metal Trouser, Medium Blue, Size - 30","code":"PCTRHM0001","name":"Hot Metal Trouser, Medium Blue, Size - 30","uom":"PCS","group":"PC","cat":"TR","pic":"👖"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCTRHM0002', '{"desc":"Hot Metal Trouser, Medium Blue, Size - 32","alias":"Hot Metal Trouser, Medium Blue, Size - 32","code":"PCTRHM0002","name":"Hot Metal Trouser, Medium Blue, Size - 32","uom":"PCS","group":"PC","cat":"TR","pic":"👖"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCTRHM0003', '{"desc":"Hot Metal Trouser, Medium Blue, Size - 34","alias":"Hot Metal Trouser, Medium Blue, Size - 34","code":"PCTRHM0003","name":"Hot Metal Trouser, Medium Blue, Size - 34","uom":"PCS","group":"PC","cat":"TR","pic":"👖"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCTRHM0004', '{"desc":"Hot Metal Trouser, Medium Blue, Size - 36","alias":"Hot Metal Trouser, Medium Blue, Size - 36","code":"PCTRHM0004","name":"Hot Metal Trouser, Medium Blue, Size - 36","uom":"PCS","group":"PC","cat":"TR","pic":"👖"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCTRCT0001', '{"desc":"Poly Cotton Work Trouser, Navy Blue, Size - 30","alias":"Poly Cotton Work Trouser, Navy Blue, Size - 30","code":"PCTRCT0001","name":"Poly Cotton Work Trouser, Navy Blue, Size - 30","uom":"PCS","group":"PC","cat":"TR","pic":"👖"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCTRCT0002', '{"desc":"Poly Cotton Work Trouser, Navy Blue, Size - 32","alias":"Poly Cotton Work Trouser, Navy Blue, Size - 32","code":"PCTRCT0002","name":"Poly Cotton Work Trouser, Navy Blue, Size - 32","uom":"PCS","group":"PC","cat":"TR","pic":"👖"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCTRCT0003', '{"desc":"Poly Cotton Work Trouser, Navy Blue, Size - 34","alias":"Poly Cotton Work Trouser, Navy Blue, Size - 34","code":"PCTRCT0003","name":"Poly Cotton Work Trouser, Navy Blue, Size - 34","uom":"PCS","group":"PC","cat":"TR","pic":"👖"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCTRCT0004', '{"desc":"Poly Cotton Work Trouser, Navy Blue, Size - 36","alias":"Poly Cotton Work Trouser, Navy Blue, Size - 36","code":"PCTRCT0004","name":"Poly Cotton Work Trouser, Navy Blue, Size - 36","uom":"PCS","group":"PC","cat":"TR","pic":"👖"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCVSPE0001', '{"desc":"Hi-Viz Vest, Yellow, Size - Medium","alias":"Hi-Viz Vest, Yellow, Size - Medium","code":"PCVSPE0001","name":"Hi-Viz Vest, Yellow, Size - Medium","uom":"PRS","group":"PC","cat":"VS","pic":"🦺"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCVSPE0002', '{"desc":"Hi-Viz Vest, Yellow, Size - Large","alias":"Hi-Viz Vest, Yellow, Size - Large","code":"PCVSPE0002","name":"Hi-Viz Vest, Yellow, Size - Large","uom":"PRS","group":"PC","cat":"VS","pic":"🦺"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'PCVSPE0003', '{"desc":"Hi-Viz Vest, Yellow, Size - X Large","alias":"Hi-Viz Vest, Yellow, Size - X Large","code":"PCVSPE0003","name":"Hi-Viz Vest, Yellow, Size - X Large","uom":"PRS","group":"PC","cat":"VS","pic":"🦺"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'GLHMCT0001', '{"desc":"Heat Resistant Gloves","alias":"Heat Resistant Gloves","code":"GLHMCT0001","name":"Heat Resistant Gloves","uom":"PRS","group":"GL","cat":"HR","pic":"🧤"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'GLGPCT0001', '{"desc":"General Purpose Gloves, 12 prs/dp","alias":"General Purpose Gloves, 12 prs/dp","code":"GLGPCT0001","name":"General Purpose Gloves, 12 prs/dp","uom":"DP","group":"GL","cat":"GP","pic":"🧤"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FWHMBT0001', '{"desc":"Hot Metal Boots, Black, Size - 40","alias":"Hot Metal Boots, Black, Size - 40","code":"FWHMBT0001","name":"Hot Metal Boots, Black, Size - 40","uom":"PRS","group":"FW","cat":"HM","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FWHMBT0002', '{"desc":"Hot Metal Boots, Black, Size - 41","alias":"Hot Metal Boots, Black, Size - 41","code":"FWHMBT0002","name":"Hot Metal Boots, Black, Size - 41","uom":"PRS","group":"FW","cat":"HM","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FWHMBT0003', '{"desc":"Hot Metal Boots, Black, Size - 42","alias":"Hot Metal Boots, Black, Size - 42","code":"FWHMBT0003","name":"Hot Metal Boots, Black, Size - 42","uom":"PRS","group":"FW","cat":"HM","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FWHMBT0004', '{"desc":"Hot Metal Boots, Black, Size - 43","alias":"Hot Metal Boots, Black, Size - 43","code":"FWHMBT0004","name":"Hot Metal Boots, Black, Size - 43","uom":"PRS","group":"FW","cat":"HM","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FWHMBT0005', '{"desc":"Hot Metal Boots, Black, Size - 44","alias":"Hot Metal Boots, Black, Size - 44","code":"FWHMBT0005","name":"Hot Metal Boots, Black, Size - 44","uom":"PRS","group":"FW","cat":"HM","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FEGPBT0001', '{"desc":"General Purpose Safety Boots, Brown, Size - 40","alias":"General Purpose Safety Boots, Brown, Size - 40","code":"FEGPBT0001","name":"General Purpose Safety Boots, Brown, Size - 40","uom":"PRS","group":"FW","cat":"GP","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FEGPBT0002', '{"desc":"General Purpose Safety Boots, Brown, Size - 41","alias":"General Purpose Safety Boots, Brown, Size - 41","code":"FEGPBT0002","name":"General Purpose Safety Boots, Brown, Size - 41","uom":"PRS","group":"FW","cat":"GP","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FEGPBT0003', '{"desc":"General Purpose Safety Boots, Brown, Size - 42","alias":"General Purpose Safety Boots, Brown, Size - 42","code":"FEGPBT0003","name":"General Purpose Safety Boots, Brown, Size - 42","uom":"PRS","group":"FW","cat":"GP","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FEGPBT0004', '{"desc":"General Purpose Safety Boots, Brown, Size - 43","alias":"General Purpose Safety Boots, Brown, Size - 43","code":"FEGPBT0004","name":"General Purpose Safety Boots, Brown, Size - 43","uom":"PRS","group":"FW","cat":"GP","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('items', 'FEGPBT0005', '{"desc":"General Purpose Safety Boots, Brown, Size - 44","alias":"General Purpose Safety Boots, Brown, Size - 44","code":"FEGPBT0005","name":"General Purpose Safety Boots, Brown, Size - 44","uom":"PRS","group":"FW","cat":"GP","pic":"🥾"}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('priceLists', 'PL1', '{"id":"PL1","name":"PPE Price List1","desc":"Supply of PPE","contract":"50002834","customer":"C01","validFrom":"2026-08-10","validTill":"2026-11-09","deliveryPeriod":2,"lines":[{"sl":1,"codes":["HPHTPE0001"],"uom":"PCS","price":15,"alloc":2,"restricted":true},{"sl":2,"codes":["EFSPPC0002"],"uom":"PCS","price":30,"alloc":3,"restricted":true},{"sl":3,"codes":["RPDM950001"],"uom":"PKT","price":50,"alloc":5,"restricted":true},{"sl":4,"codes":["PCSHHM0001","PCSHHM0002","PCSHHM0003"],"uom":"PCS","price":225,"alloc":3,"restricted":true},{"sl":5,"codes":["PCTRHM0001","PCTRHM0002","PCTRHM0003","PCTRHM0004"],"uom":"PCS","price":230,"alloc":3,"restricted":true},{"sl":6,"codes":["GLHMCT0001"],"uom":"PRS","price":20,"alloc":10,"restricted":true},{"sl":7,"codes":["GLGPCT0001"],"uom":"DP","price":15,"alloc":20,"restricted":true},{"sl":8,"codes":["FWHMBT0001","FWHMBT0002","FWHMBT0003","FWHMBT0004","FWHMBT0005"],"uom":"PRS","price":600,"alloc":1,"restricted":true}]}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('priceLists', 'PL2', '{"id":"PL2","name":"PPE Price List2","desc":"Supply of PPE","contract":"50002834","customer":"C01","validFrom":"2026-08-15","validTill":"2026-11-14","deliveryPeriod":2,"lines":[{"sl":1,"codes":["HPHTPE0002"],"uom":"PCS","price":15,"alloc":2,"restricted":true},{"sl":2,"codes":["EFSPPC0001"],"uom":"PCS","price":10,"alloc":3,"restricted":true},{"sl":3,"codes":["EFGGNY0001"],"uom":"PCS","price":15,"alloc":2,"restricted":true},{"sl":4,"codes":["RPDM950001"],"uom":"PKT","price":50,"alloc":5,"restricted":true},{"sl":5,"codes":["PCSHCT0001","PCSHCT0002","PCSHCT0003"],"uom":"PCS","price":85,"alloc":3,"restricted":true},{"sl":6,"codes":["PCTRCT0001","PCTRCT0002","PCTRCT0003","PCTRCT0004"],"uom":"PCS","price":80,"alloc":3,"restricted":true},{"sl":7,"codes":["PCVSPE0001","PCVSPE0002","PCVSPE0003"],"uom":"PRS","price":25,"alloc":2,"restricted":true},{"sl":8,"codes":["GLGPCT0001"],"uom":"DP","price":15,"alloc":10,"restricted":true},{"sl":9,"codes":["FEGPBT0001","FEGPBT0002","FEGPBT0003","FEGPBT0004","FEGPBT0005"],"uom":"PRS","price":175,"alloc":2,"restricted":true}]}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('priceLists', 'PL3', '{"id":"PL3","name":"PPE Price List3","desc":"Supply of PPE","contract":"60008792","customer":"C02","validFrom":"2026-08-20","validTill":"2026-11-19","deliveryPeriod":2,"lines":[{"sl":1,"codes":["HPHTPE0003"],"uom":"PCS","price":15,"alloc":0,"restricted":true},{"sl":2,"codes":["EFSPPC0002"],"uom":"PCS","price":10,"alloc":3,"restricted":true},{"sl":3,"codes":["EFGGNY0001"],"uom":"PCS","price":15,"alloc":2,"restricted":true},{"sl":4,"codes":["RPDM950001"],"uom":"PKT","price":50,"alloc":5,"restricted":true},{"sl":5,"codes":["PCCVCT0001","PCCVCT0002","PCCVCT0003"],"uom":"PCS","price":100,"alloc":3,"restricted":true},{"sl":6,"codes":["PCVSPE0001","PCVSPE0002","PCVSPE0003"],"uom":"PRS","price":25,"alloc":2,"restricted":true},{"sl":7,"codes":["GLGPCT0001"],"uom":"DP","price":15,"alloc":10,"restricted":true},{"sl":8,"codes":["FEGPBT0001","FEGPBT0002","FEGPBT0003","FEGPBT0004","FEGPBT0005"],"uom":"PRS","price":175,"alloc":2,"restricted":true}]}'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('uoms', 'PCS', '"PCS"'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('uoms', 'PKT', '"PKT"'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('uoms', 'PRS', '"PRS"'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('uoms', 'DOZ', '"DOZ"'::jsonb) on conflict (kind, id) do update set data = excluded.data;
+insert into masters (kind, id, data) values ('uoms', 'DP', '"DP"'::jsonb) on conflict (kind, id) do update set data = excluded.data;
 
-insert into departments (name) values ('Pot Line'), ('Engg Dept'), ('Maintenance'), ('Reduction'), ('Smelting') on conflict do nothing;
-insert into locations (name) values ('Location 1'), ('Location 2'), ('Location 3'), ('Location 4') on conflict do nothing;
-insert into uoms (name) values ('PCS'), ('PKT'), ('PRS'), ('DOZ') on conflict do nothing;
+-- opening inventory (EGA Main Store; reservation stores start empty)
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'HPHTPE0001', 25) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'HPHTPE0002', 25) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'HPHTPE0003', 25) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'EFSPPC0001', 25) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'EFSPPC0002', 25) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'EFGGNY0001', 10) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'RPDM950001', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCCVCT0001', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCCVCT0002', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCCVCT0003', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCSHHM0001', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCSHHM0002', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCSHHM0003', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCSHCT0001', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCSHCT0002', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCSHCT0003', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCTRHM0001', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCTRHM0002', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCTRHM0003', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCTRHM0004', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCTRCT0001', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCTRCT0002', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCTRCT0003', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCTRCT0004', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCVSPE0001', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCVSPE0002', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'PCVSPE0003', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'GLHMCT0001', 50) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'GLGPCT0001', 100) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FWHMBT0001', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FWHMBT0002', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FWHMBT0003', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FWHMBT0004', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FWHMBT0005', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FEGPBT0001', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FEGPBT0002', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FEGPBT0003', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FEGPBT0004', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
+insert into inventory (store_code, item_code, qty) values ('EGAMS', 'FEGPBT0005', 20) on conflict (store_code, item_code) do update set qty = excluded.qty;
 
-insert into items (code, name, descr, alias, uom, grp, cat, pic) values
-  ('PPE-SHOE-42', 'Safety Shoes Size 42', 'Steel-toe leather safety shoes, S3 SRC, size 42', 'Safety boots 42', 'PRS', 'Foot Protection', 'Safety Shoes', '🥾'),
-  ('PPE-SHOE-44', 'Safety Shoes Size 44', 'Steel-toe leather safety shoes, S3 SRC, size 44', 'Safety boots 44', 'PRS', 'Foot Protection', 'Safety Shoes', '🥾'),
-  ('PPE-GBOOT-43', 'Gum Boots Size 43', 'PVC chemical-resistant gum boots, size 43', 'Wellington 43', 'PRS', 'Foot Protection', 'Gum Boots', '👢'),
-  ('PPE-HAT-GRN', 'Hard Hat, Green', 'HDPE safety helmet, ratchet suspension — green', 'Helmet green', 'PCS', 'Head Protection', 'Hard Hats', '⛑️'),
-  ('PPE-HAT-WHT', 'Hard Hat, White', 'HDPE safety helmet, ratchet suspension — white', 'Helmet white', 'PCS', 'Head Protection', 'Hard Hats', '⛑️'),
-  ('PPE-CHINSTRAP', 'Helmet Chin Strap', 'Elastic chin strap for hard hats', 'Chin strap', 'PCS', 'Head Protection', 'Accessories', '🪢'),
-  ('PPE-GLV-GP', 'General Purpose Gloves', 'Cotton-polyester knitted work gloves', 'GP gloves', 'PRS', 'Hand Protection', 'General Gloves', '🧤'),
-  ('PPE-GLV-HEAT', 'Heat Resistant Gloves', 'Aluminised heat-resistant gloves up to 500°C', 'Furnace gloves', 'PRS', 'Hand Protection', 'Specialty Gloves', '🧤'),
-  ('PPE-GLV-CHEM', 'Chemical Resistant Gloves', 'Nitrile chemical-resistant gauntlet gloves', 'Nitrile gauntlet', 'PRS', 'Hand Protection', 'Specialty Gloves', '🧤'),
-  ('PPE-GOG-CLR', 'Safety Goggles, Clear', 'Anti-fog clear polycarbonate goggles', 'Clear goggles', 'PCS', 'Eye & Face', 'Goggles', '🥽'),
-  ('PPE-FSHIELD', 'Face Shield', 'Full face shield with browguard', 'Visor', 'PCS', 'Eye & Face', 'Face Shields', '🛡️'),
-  ('PPE-COV-L', 'Coverall, Large', 'Flame-retardant cotton coverall — large', 'Boiler suit L', 'PCS', 'Body Protection', 'Coveralls', '🦺'),
-  ('PPE-COV-XL', 'Coverall, X-Large', 'Flame-retardant cotton coverall — XL', 'Boiler suit XL', 'PCS', 'Body Protection', 'Coveralls', '🦺'),
-  ('PPE-VEST-HV', 'Hi-Vis Vest, Orange', 'High-visibility reflective vest — orange', 'Reflective vest', 'PCS', 'Body Protection', 'Hi-Vis', '🦺'),
-  ('PPE-MASK-DUST', 'Dust Masks (Pack of 10)', 'FFP2 disposable dust masks, pack of 10', 'FFP2 pack', 'PKT', 'Respiratory', 'Masks', '😷'),
-  ('PPE-RESP-HALF', 'Half-Face Respirator', 'Reusable half-face respirator, A2P3 filters', 'Half mask', 'PCS', 'Respiratory', 'Respirators', '😷'),
-  ('PPE-EPLUG-DOZ', 'Ear Plugs (Dozen)', 'Foam ear plugs SNR 37 dB — dozen pairs', 'Foam plugs', 'DOZ', 'Hearing', 'Ear Plugs', '🎧'),
-  ('PPE-EMUFF', 'Ear Muffs', 'Over-head ear muffs SNR 31 dB', 'Ear defenders', 'PCS', 'Hearing', 'Ear Muffs', '🎧')
-on conflict (code) do nothing;
+-- document sequences
+insert into seqs (key, val) values ('or', 1000) on conflict (key) do nothing;
+insert into seqs (key, val) values ('so', 5000) on conflict (key) do nothing;
+insert into seqs (key, val) values ('dn', 3000) on conflict (key) do nothing;
+insert into seqs (key, val) values ('inv', 9000) on conflict (key) do nothing;
+insert into seqs (key, val) values ('ret', 7000) on conflict (key) do nothing;
+insert into seqs (key, val) values ('cn', 7500) on conflict (key) do nothing;
+insert into seqs (key, val) values ('stv', 6000) on conflict (key) do nothing;
+insert into seqs (key, val) values ('emp', 1003) on conflict (key) do nothing;
 
-insert into price_lists (id, name, contract, customer, valid_from, valid_till) values
-  ('PL1', 'Price List 1', '600024', 'C01', '2026-01-01', '2026-12-31'),
-  ('PL2', 'Price List 2', '700050', 'C03', '2026-03-01', '2027-02-28'),
-  ('PL3', 'Price List 3', '800075', 'C04', '2026-05-01', '2027-04-30'),
-  ('PL4', 'Price List 4', '900010', 'C05', '2026-06-01', '2027-05-31')
-on conflict (id) do nothing;
-
-insert into price_list_lines (pl, code, price, alloc, restricted) values
-  ('PL1', 'PPE-SHOE-42', 150, 2, false),
-  ('PL1', 'PPE-SHOE-44', 150, 2, false),
-  ('PL1', 'PPE-HAT-GRN', 50, 2, false),
-  ('PL1', 'PPE-GLV-GP', 5, 12, false),
-  ('PL1', 'PPE-GLV-HEAT', 85, 2, true),
-  ('PL1', 'PPE-GOG-CLR', 18, 4, false),
-  ('PL1', 'PPE-COV-L', 95, 4, false),
-  ('PL1', 'PPE-MASK-DUST', 35, 6, false),
-  ('PL1', 'PPE-EPLUG-DOZ', 22, 4, false),
-  ('PL1', 'PPE-VEST-HV', 28, 2, false),
-  ('PL2', 'PPE-SHOE-44', 145, 2, false),
-  ('PL2', 'PPE-GBOOT-43', 75, 2, false),
-  ('PL2', 'PPE-HAT-WHT', 48, 2, false),
-  ('PL2', 'PPE-CHINSTRAP', 8, 4, false),
-  ('PL2', 'PPE-GLV-CHEM', 32, 6, false),
-  ('PL2', 'PPE-FSHIELD', 45, 2, true),
-  ('PL2', 'PPE-COV-XL', 95, 4, false),
-  ('PL2', 'PPE-RESP-HALF', 120, 1, true),
-  ('PL2', 'PPE-EMUFF', 55, 2, false),
-  ('PL3', 'PPE-SHOE-42', 148, 2, false),
-  ('PL3', 'PPE-HAT-GRN', 50, 2, false),
-  ('PL3', 'PPE-GLV-GP', 5.5, 12, false),
-  ('PL3', 'PPE-GOG-CLR', 18.5, 4, false),
-  ('PL3', 'PPE-VEST-HV', 28, 3, false),
-  ('PL3', 'PPE-MASK-DUST', 36, 6, false),
-  ('PL4', 'PPE-SHOE-44', 150, 2, false),
-  ('PL4', 'PPE-HAT-WHT', 52, 2, false),
-  ('PL4', 'PPE-GLV-CHEM', 33, 6, false),
-  ('PL4', 'PPE-COV-L', 98, 4, false),
-  ('PL4', 'PPE-EPLUG-DOZ', 23, 4, false)
-on conflict (pl, code) do nothing;
-
-insert into sequences (key, val) values ('or', 1000), ('so', 5000), ('dn', 3000), ('inv', 9000), ('ret', 7000), ('emp', 1003) on conflict (key) do nothing;
+-- NOTE: no demo users in Supabase mode — people sign up in the apps and
+-- the admin (ADMIN_EMAILS) assigns customer, price lists and stores.

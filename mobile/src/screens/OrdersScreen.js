@@ -8,12 +8,13 @@ import { C } from "../theme";
 
 const BUCKETS = [
   ["all", "Orders"], ["progress", "In Progress"], ["approval", "Order Approval"],
-  ["complete", "Complete"], ["cancel", "Cancelled"], ["reject", "Rejected"]
+  ["complete", "Completed"], ["returns", "Return Orders"], ["cancel", "Cancelled"], ["reject", "Rejected"]
 ];
 const bucketOf = o => ({
-  pending_approval: "approval", in_progress: "progress", do_created: "progress",
+  pending_approval: "approval", in_progress: "progress", partially_delivered: "progress", do_created: "progress",
   partially_received: "progress", complete: "complete", cancelled: "cancel", rejected: "reject"
 }[o.status] || "all");
+const inBucket = (o, id) => id === "all" ? true : id === "returns" ? (o.returns || []).length > 0 : bucketOf(o) === id;
 
 export default function OrdersScreen({ navigation }) {
   const { user } = useStore();
@@ -27,13 +28,13 @@ export default function OrdersScreen({ navigation }) {
   useFocusEffect(useCallback(() => { loadOrders(); }, [loadOrders]));
 
   if (!orders) return <Loading />;
-  const list = bucket === "all" ? orders : orders.filter(o => bucketOf(o) === bucket);
+  const list = orders.filter(o => inBucket(o, bucket));
 
   return (
     <View style={{ flex: 1 }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, padding: 10 }}>
         {BUCKETS.map(([id, lbl]) => {
-          const n = id === "all" ? orders.length : orders.filter(o => bucketOf(o) === id).length;
+          const n = id === "all" ? orders.length : orders.filter(o => inBucket(o, id)).length;
           return (
             <TouchableOpacity key={id} onPress={() => setBucket(id)}
               style={[s.tab, bucket === id && { backgroundColor: C.navy }]}>
@@ -58,6 +59,12 @@ export default function OrdersScreen({ navigation }) {
               <Text style={{ fontWeight: "700", color: C.ink }}>AED {fmt(o.total)}</Text>
               {o.so ? ` · SO ${o.so}` : ""}{o.dns?.length ? ` · DO ${o.dns.join(", ")}` : ""}
             </Text>
+            {o.lines.some(l => (l.delivered || 0) > l.received) && (
+              <Text style={{ color: C.green, fontSize: 11, marginTop: 4 }}>
+                Ready to receive: {o.lines.filter(l => (l.delivered || 0) > l.received)
+                  .map(l => `${l.code} ${(l.delivered || 0) - l.received}`).join(" · ")}
+              </Text>
+            )}
             <Btn small title="View / Actions" color={C.blue} style={{ alignSelf: "flex-start", marginTop: 9 }}
               onPress={() => navigation.navigate("OrderDetail", { ref: o.ref })} />
           </Card>

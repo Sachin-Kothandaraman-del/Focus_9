@@ -49,37 +49,50 @@ export default function ProfileScreen() {
         <KV k="Department" v={p.user.dept || "—"} />
         <KV k="Mobile" v={p.user.phone || "—"} />
         <KV k="Role" v={p.user.role} />
-        <KV k="Approved Price List" v={p.priceList ? `${p.priceList.name} · Contract ${p.priceList.contract}` : "—"} />
+        {p.user.location ? <KV k="Location" v={p.user.location} /> : null}
+        {p.user.role === "employee" ? <KV k="Stores" v={`${p.user.fromStore || "—"} (Main) → ${p.user.toStore || "—"} (Reservation)`} /> : null}
       </Card>
 
-      {p.approvedQtyList.length > 0 && (
-        <>
-          <Text style={s.sec}>Approved Qty List</Text>
+      {(p.priceLists || []).map(pl => (
+        <View key={pl.id}>
+          <Text style={s.sec}>Approved Qty List — {pl.id} · {pl.name}</Text>
           <Card>
+            <Text style={{ color: C.red, fontSize: 11, fontWeight: "600", marginBottom: 6 }}>
+              Price List Validity — Start: {pl.validFrom}   End: {pl.validTill}   ·   Delivery Period — {pl.deliveryPeriod} Day/s   ·   Contract {pl.contract}
+            </Text>
             <View style={s.tr}>
-              <Text style={[s.th, { flex: 2.4, textAlign: "left" }]}>Item</Text>
+              <Text style={[s.th, { flex: 2.2, textAlign: "left" }]}>Item</Text>
               <Text style={s.th}>Alloc</Text>
+              <Text style={s.th}>Alloc Amt</Text>
               <Text style={s.th}>Used</Text>
+              <Text style={s.th}>Used Amt</Text>
               <Text style={s.th}>Bal</Text>
-              <Text style={[s.th, { flex: 1.3 }]}>Restricted</Text>
             </View>
-            {p.approvedQtyList.map(l => (
-              <View key={l.code} style={s.tr}>
-                <View style={{ flex: 2.4 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "600" }}>{l.name}</Text>
-                  <Text style={{ fontSize: 10, color: C.mut }}>{l.code} · {l.uom}</Text>
+            {pl.approvedQtyList.map(l => (
+              <View key={l.key} style={s.tr}>
+                <View style={{ flex: 2.2 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "600" }}>{l.items[0].name}{l.items.length > 1 ? ` (+${l.items.length - 1} sizes)` : ""}</Text>
+                  <Text style={{ fontSize: 9, color: C.mut }}>{l.uom} · AED {l.price}</Text>
                 </View>
                 <Text style={s.td}>{l.allocated}</Text>
+                <Text style={[s.td, { color: C.red }]}>{l.allocatedAmount}</Text>
                 <Text style={s.td}>{l.used}</Text>
+                <Text style={[s.td, { color: C.red }]}>{l.usedAmount}</Text>
                 <Text style={[s.td, { fontWeight: "800", color: l.balance > 0 ? C.green : C.red }]}>{l.balance}</Text>
-                <View style={{ flex: 1.3, alignItems: "flex-end" }}>
-                  <Chip label={l.restricted ? "Yes" : "No"} color={l.restricted ? C.red : C.mut} />
-                </View>
               </View>
             ))}
+            <View style={[s.tr, { borderBottomWidth: 0 }]}>
+              <Text style={[s.th, { flex: 2.2, textAlign: "left" }]}>Totals</Text>
+              <Text style={s.th} />
+              <Text style={[s.td, { color: C.red, fontWeight: "800" }]}>{pl.totals.allocatedAmount.toFixed(2)}</Text>
+              <Text style={s.th} />
+              <Text style={[s.td, { color: C.red, fontWeight: "800" }]}>{pl.totals.usedAmount.toFixed(2)}</Text>
+              <Text style={s.th} />
+            </View>
+            <Text style={{ fontSize: 9, color: C.mut }}>Totals = Total Allocated Amount / Total Used Amount (rolled into the shopping screen header)</Text>
           </Card>
-        </>
-      )}
+        </View>
+      ))}
 
       <Btn title="Sign out" color={C.navy} onPress={logout} />
       <Btn title="🗑 Delete my account" color={C.red} onPress={confirmDelete} />

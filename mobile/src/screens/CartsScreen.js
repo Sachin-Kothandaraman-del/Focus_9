@@ -5,66 +5,67 @@ import { api } from "../api";
 import { Card, Btn, Chip, fmt, Empty } from "../components";
 import { C } from "../theme";
 
+/* My Carts (SRS2): server-side Order & Approval carts with 10-minute countdown,
+   stock / delivery-date preview, Proceed → Order Screen → Place the Order. */
 export default function CartsScreen({ navigation }) {
-  const { catalog, orderCart, approvalCart, removeFromCart, clearCart, refreshCatalog, user } = useStore();
+  const { catalog, cart, remainingSec, removeCartLine, refreshCart, refreshCatalog, user } = useStore();
   const [review, setReview] = useState(null); // "order" | "approval" | null
   const [busy, setBusy] = useState(false);
 
-  const lineOf = code => catalog?.lines.find(l => l.code === code);
-  const cartTotal = cart => cart.reduce((s, x) => s + x.qty * (lineOf(x.code)?.price || 0), 0);
+  const total = lines => lines.reduce((s2, x) => s2 + x.amount, 0);
+  const profileOf = plId => catalog?.profiles.find(p => p.priceList.id === plId) || catalog?.profiles?.[0];
+  const headLines = cart.order.length ? cart.order : cart.approval;
+  const headProfile = headLines.length ? profileOf(headLines[0].plId) : null;
 
   async function place(kind) {
-    const cart = kind === "order" ? orderCart : approvalCart;
     setBusy(true);
     try {
-      const o = await api("/api/orders", {
-        method: "POST",
-        body: { kind, lines: cart.map(x => ({ code: x.code, qty: x.qty })), contract: catalog.priceList.contract }
-      });
-      clearCart(kind);
-      await refreshCatalog();
+      const o = await api("/api/orders", { method: "POST", body: { kind } });
+      await refreshCart(); await refreshCatalog();
       setReview(null);
       Alert.alert(
         kind === "order" ? "Order placed" : "Sent for approval",
         kind === "order"
-          ? `Order ${o.ref} placed — moved to Order in Progress.${o.so ? `\nERP Sales Order ${o.so} created.` : ""}`
-          : `Order ${o.ref} moved to the Order Approval bucket.`
+          ? `Order ${o.ref} placed — moved to Orders in Progress.${o.so ? `\nERP Sales Order ${o.so} created.` : ""}\nReserved qtys were stock-transferred to the Reservation store.`
+          : `Order ${o.ref} moved to the Order Approval bucket.\nEGA has 3 days to approve, otherwise it is cancelled automatically.`
       );
       navigation.navigate("Orders");
     } catch (e) {
       Alert.alert("Could not place order", e.message);
+      await refreshCart(); await refreshCatalog();
     } finally {
       setBusy(false);
     }
   }
 
-  function CartSection({ kind, cart, title, chipLabel, chipColor }) {
+  function CartSection({ kind, lines, title, chipLabel, chipColor }) {
     return (
       <>
         <Text style={s.sec}>{title} <Chip label={chipLabel} color={chipColor} /></Text>
         <Card>
-          {cart.length === 0 ? (
+          {lines.length === 0 ? (
             <Text style={{ color: C.mut, textAlign: "center", padding: 12 }}>Empty</Text>
           ) : (
             <>
-              {cart.map(x => {
-                const l = lineOf(x.code);
-                if (!l) return null;
-                return (
-                  <View key={x.code} style={s.line}>
-                    <Text style={{ fontSize: 22, marginRight: 10 }}>{l.item.pic}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: "700", fontSize: 13 }}>{l.item.name}</Text>
-                      <Text style={{ color: C.mut, fontSize: 11 }}>{x.qty} {l.item.uom} × AED {fmt(l.price)}</Text>
-                    </View>
-                    <Text style={{ fontWeight: "700", fontSize: 13 }}>AED {fmt(x.qty * l.price)}</Text>
-                    <TouchableOpacity onPress={() => removeFromCart(kind, x.code)} style={{ padding: 6 }}>
-                      <Text style={{ color: C.red }}>✕</Text>
-                    </TouchableOpacity>
+              {lines.map(x => (
+                <View key={x.id} style={s.line}>
+                  <Text style={{ fontSize: 22, marginRight: 10 }}>{x.pic}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: "700", fontSize: 13 }}>{x.name}</Text>
+                    <Text style={{ color: C.mut, fontSize: 11 }}>{x.qty} {x.uom} × AED {fmt(x.price)}</Text>
+                    <Text style={{ fontSize: 10, color: x.stockStatus === "yes" ? C.green : x.stockStatus === "partial" ? C.amber : C.red }}>
+                      {x.stockStatus === "yes" ? `In stock — deliver by ${x.deliveryDate}`
+                        : x.stockStatus === "partial" ? `${x.reservedQty} reserved (by ${x.deliveryDate}) + ${x.dodQty} DOD to be advised`
+                        : "No stock — DOD to be advised"}
+                    </Text>
                   </View>
-                );
-              })}
-              <Btn title={`Proceed to Order Screen (AED ${fmt(cartTotal(cart))})`}
+                  <Text style={{ fontWeight: "700", fontSize: 13 }}>AED {fmt(x.amount)}</Text>
+                  <TouchableOpacity onPress={() => removeCartLine(x.id)} style={{ padding: 6 }}>
+                    <Text style={{ color: C.red }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <Btn title={`Proceed to Order Screen (AED ${fmt(total(lines))})`}
                 color={kind === "order" ? C.orange : C.navy}
                 onPress={() => setReview(kind)} />
             </>
@@ -74,13 +75,40 @@ export default function CartsScreen({ navigation }) {
     );
   }
 
-  const reviewCart = review === "order" ? orderCart : approvalCart;
+  const reviewLines = review === "order" ? cart.order : cart.approval;
+  const reviewProfile = reviewLines.length ? profileOf(reviewLines[0].plId) : null;
+  const previewRows = [];
+  for (const x of reviewLines) {
+    if (x.reservedQty >= x.qty) previewRows.push({ ...x, rid: x.id, qty: x.qty, st: "Yes", date: x.deliveryDate, remark: "" });
+    else if (x.reservedQty <= 0) previewRows.push({ ...x, rid: x.id, qty: x.qty, st: "No", date: null, remark: "DOD to be advised" });
+    else {
+      previewRows.push({ ...x, rid: x.id + "a", qty: x.reservedQty, st: "Yes", date: x.deliveryDate, remark: "" });
+      previewRows.push({ ...x, rid: x.id + "b", qty: x.dodQty, st: "No", date: null, remark: "DOD to be advised" });
+    }
+  }
 
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }}>
-      <CartSection kind="order" cart={orderCart} title="🧺 Order Cart" chipLabel="within limits" chipColor={C.green} />
-      <CartSection kind="approval" cart={approvalCart} title="📨 Approval Cart" chipLabel="needs client approval" chipColor={C.amber} />
-      {orderCart.length === 0 && approvalCart.length === 0 && (
+      {remainingSec != null && (cart.order.length + cart.approval.length) > 0 && (
+        <Card style={{ backgroundColor: remainingSec < 120 ? "#fdecec" : "#fff8ec" }}>
+          <Text style={{ fontSize: 13 }}>
+            ⏱ <Text style={{ fontWeight: "800" }}>{String(Math.floor(remainingSec / 60)).padStart(2, "0")}:{String(remainingSec % 60).padStart(2, "0")}</Text> left
+            to place the order — after 10 minutes the cart empties and stock is released to the Main store.
+          </Text>
+        </Card>
+      )}
+      {headProfile && (cart.order.length + cart.approval.length) > 0 && (
+        <Card style={{ borderLeftWidth: 4, borderLeftColor: C.orange }}>
+          <Text style={{ fontWeight: "800", color: C.navy }}>{headProfile.customer?.name} · Contract {headProfile.priceList.contract}</Text>
+          <Text style={{ color: C.mut, fontSize: 11 }}>Validity {headProfile.priceList.validFrom} → {headProfile.priceList.validTill}</Text>
+          <Text style={{ color: C.red, fontSize: 12, marginTop: 3, fontWeight: "600" }}>
+            Total Allocated Amount — {fmt(headProfile.totals.allocatedAmount)}   ·   Total Used Amount — {fmt(headProfile.totals.usedAmount)}
+          </Text>
+        </Card>
+      )}
+      <CartSection kind="order" lines={cart.order} title="🧺 Order Cart" chipLabel="within limits" chipColor={C.green} />
+      <CartSection kind="approval" lines={cart.approval} title="📨 Approval Cart" chipLabel="needs client approval" chipColor={C.amber} />
+      {cart.order.length === 0 && cart.approval.length === 0 && (
         <Empty icon="🧺" text="Both carts are empty. Add items from the Shop tab." />
       )}
 
@@ -93,28 +121,30 @@ export default function CartsScreen({ navigation }) {
                 Order Screen {review === "approval" ? "· FOR APPROVAL" : ""}
               </Text>
               <Card>
-                <Text style={s.kv}>Contract Ref: <Text style={s.b}>{catalog?.priceList.contract}</Text></Text>
-                <Text style={s.kv}>Employee: <Text style={s.b}>{user?.empId} — {user?.name}</Text></Text>
-                <Text style={s.kv}>Department: <Text style={s.b}>{user?.dept}</Text></Text>
-                <Text style={[s.kv, { color: C.mut, fontSize: 11 }]}>Doc Ref & line numbers are assigned by the system on placing.</Text>
+                <Text style={s.kv}>Contract Ref: <Text style={s.b}>{reviewProfile?.priceList.contract}</Text> · Price List: <Text style={s.b}>{reviewProfile?.priceList.name}</Text></Text>
+                <Text style={s.kv}>Employee: <Text style={s.b}>{user?.empId} — {user?.name}</Text> · Dept: <Text style={s.b}>{user?.dept || "—"}</Text></Text>
+                <Text style={s.kv}>From Store: <Text style={s.b}>{cart.fromStore}</Text> → To Store: <Text style={s.b}>{cart.toStore}</Text></Text>
+                <Text style={[s.kv, { color: C.mut, fontSize: 11 }]}>
+                  Doc Ref & line numbers are assigned on placing. Delivery dates follow the {reviewProfile?.priceList.deliveryPeriod}-day delivery period rule.
+                </Text>
               </Card>
               <Card>
-                {reviewCart.map((x, ix) => {
-                  const l = lineOf(x.code);
-                  return (
-                    <View key={x.code} style={s.line}>
-                      <Text style={{ width: 22, color: C.mut, fontSize: 12 }}>{ix + 1}</Text>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontWeight: "700", fontSize: 13 }}>{l.item.name}</Text>
-                        <Text style={{ color: C.mut, fontSize: 11 }}>{x.qty} {l.item.uom} × AED {fmt(l.price)}</Text>
-                      </View>
-                      <Text style={{ fontWeight: "700" }}>AED {fmt(x.qty * l.price)}</Text>
+                {previewRows.map((x, ix) => (
+                  <View key={x.rid} style={s.line}>
+                    <Text style={{ width: 22, color: C.mut, fontSize: 12 }}>{ix + 1}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontWeight: "700", fontSize: 13 }}>{x.name}</Text>
+                      <Text style={{ color: C.mut, fontSize: 11 }}>{x.qty} {x.uom} × AED {fmt(x.price)}</Text>
+                      <Text style={{ fontSize: 10, color: x.st === "Yes" ? C.green : C.amber }}>
+                        Stock {x.st} · {x.date ? `Delivery ${x.date}` : "DOD to be advised"}
+                      </Text>
                     </View>
-                  );
-                })}
+                    <Text style={{ fontWeight: "700" }}>AED {fmt(x.qty * x.price)}</Text>
+                  </View>
+                ))}
                 <View style={[s.line, { borderTopWidth: 1, borderColor: C.line, paddingTop: 8 }]}>
                   <Text style={{ flex: 1, fontWeight: "800" }}>Total Amount</Text>
-                  <Text style={{ fontWeight: "800", color: C.navy }}>AED {fmt(cartTotal(reviewCart))}</Text>
+                  <Text style={{ fontWeight: "800", color: C.navy }}>AED {fmt(total(reviewLines))}</Text>
                 </View>
               </Card>
               <Btn title={busy ? "Placing…" : review === "approval" ? "📨 Place the Order (send for approval)" : "🛒 Place the Order"}

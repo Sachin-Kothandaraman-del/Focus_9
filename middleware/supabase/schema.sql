@@ -1,92 +1,99 @@
 -- ═══════════════════════════════════════════════════════════════════
--- PROSAFE × EGA — Supabase schema
+-- PROSAFE × EGA — Supabase schema  v3 (Mobile App SRS2, 25-08-26)
 -- Run this FIRST in Supabase → SQL Editor, then run seed.sql.
 -- Only the middleware (service role key) touches these tables:
 -- RLS is enabled with NO policies, so anon/authenticated clients are
 -- denied direct access — exactly what we want.
+--
+-- v3 changes: masters unified into a flexible (kind,id,data) table so the
+-- admin can create & control every master (customers, contracts,
+-- departments, locations, divisions, stores, groups, categories, uoms,
+-- items, priceLists); per-store inventory; server-side carts (10-minute
+-- stock hold); notifications; allocations keyed by price-list LINE key
+-- (e.g. 'PL1#4' — size variants share one allocation).
+-- Migrating from v2? Drop the old tables first (or use a fresh project).
 -- ═══════════════════════════════════════════════════════════════════
 
-create table if not exists customers (
-  id      text primary key,
-  name    text not null,
-  address text default '',
-  phone   text default '',
-  email   text default ''
-);
-
-create table if not exists departments ( name text primary key );
-create table if not exists locations   ( name text primary key );
-create table if not exists uoms        ( name text primary key );
-
-create table if not exists items (
-  code  text primary key,
-  name  text not null,
-  descr text default '',
-  alias text default '',
-  uom   text not null references uoms(name),
-  grp   text not null,
-  cat   text not null,
-  pic   text default ''
-);
-
-create table if not exists price_lists (
-  id         text primary key,
-  name       text not null,
-  contract   text not null,
-  customer   text not null references customers(id),
-  valid_from date,
-  valid_till date
-);
-
-create table if not exists price_list_lines (
-  pl         text not null references price_lists(id) on delete cascade,
-  code       text not null references items(code),
-  price      numeric not null,
-  alloc      integer not null default 0,
-  restricted boolean not null default false,
-  primary key (pl, code)
+-- All masters, one row per record: kind ∈ customers|contracts|departments|
+-- locations|divisions|stores|groups|categories|uoms|items|priceLists.
+-- data holds the JSON object exactly as the app uses it.
+create table if not exists masters (
+  kind text not null,
+  id   text not null,
+  data jsonb not null,
+  primary key (kind, id)
 );
 
 -- App user profiles. id = Supabase Auth user id (auth.users.id).
 create table if not exists profiles (
-  id         uuid primary key,
-  email      text unique not null,
-  name       text not null,
-  phone      text default '',
-  emp_id     text unique,
-  role       text not null default 'employee' check (role in ('employee','approver','admin')),
-  customer   text references customers(id),
-  dept       text,
-  price_list text references price_lists(id),
-  active     boolean not null default false,
-  created_at timestamptz not null default now()
+  id          text primary key,
+  email       text not null unique,
+  name        text not null,
+  phone       text default '',
+  emp_id      text default '',
+  role        text not null default 'employee' check (role in ('employee','approver','admin')),
+  customer    text,
+  dept        text,
+  location    text,
+  price_list  text,                       -- legacy single price list (first of price_lists)
+  price_lists jsonb not null default '[]',
+  from_store  text,                       -- Main store
+  to_store    text,                       -- Reservation store
+  active      boolean not null default false,
+  created_at  timestamptz not null default now()
 );
 
--- Per-employee allocation usage: consumed against price-list allocation,
--- extra = additional qty granted through EGA approvals.
+-- Stock per store (Main + Reservation stores).
+create table if not exists inventory (
+  store_code text not null,
+  item_code  text not null,
+  qty        numeric not null default 0 check (qty >= 0),
+  primary key (store_code, item_code)
+);
+
+-- Server-side shopping carts (10-minute stock hold). data = full cart JSON.
+create table if not exists carts (
+  user_id    text primary key,
+  data       jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists notifications (
+  id      bigserial primary key,
+  user_id text not null,
+  at      timestamptz not null default now(),
+  msg     text not null,
+  read    boolean not null default false
+);
+
+-- Allocation usage per user per price-list LINE key (e.g. 'PL1#4').
 create table if not exists allocations (
-  user_id  uuid not null,
-  code     text not null references items(code),
+  user_id  text not null,
+  code     text not null,            -- price-list line key
   consumed numeric not null default 0,
   extra    numeric not null default 0,
   primary key (user_id, code)
 );
 
+-- Orders: full order document as JSONB (single source of truth for the apps).
 create table if not exists orders (
   ref        text primary key,
-  emp        uuid,
+  emp        text,
   status     text,
   data       jsonb not null,
   created_at timestamptz not null default now()
 );
 
+-- ERP counter-documents mirrored for the apps:
+-- kind ∈ so|dn|inv|ret|cn|stv  (Receipt Vouchers removed per SRS2).
 create table if not exists erp_docs (
+  id         bigserial primary key,
   ref        text not null,
-  kind       text not null check (kind in ('so','dn','inv','ret')),
+  kind       text not null,
   data       jsonb not null,
-  created_at timestamptz not null default now(),
-  primary key (ref, kind)
+  created_at timestamptz not null default now()
 );
+create index if not exists erp_docs_kind_ref on erp_docs (kind, ref);
 
 create table if not exists erp_log (
   id  bigserial primary key,
@@ -94,45 +101,56 @@ create table if not exists erp_log (
   msg text not null
 );
 
-create table if not exists sequences (
+create table if not exists seqs (
   key text primary key,
-  val integer not null
+  val bigint not null
 );
 
--- Atomic sequence counter (order/SO/DO/invoice/return/employee numbers)
-create or replace function next_seq(p_key text) returns integer
-language plpgsql security definer as $$
-declare v integer;
+-- ── atomic helpers ─────────────────────────────────────────────────
+create or replace function next_seq(p_key text) returns bigint
+language plpgsql as $$
+declare v bigint;
 begin
-  update sequences set val = val + 1 where key = p_key returning val into v;
-  if v is null then
-    insert into sequences(key, val) values (p_key, 1) returning val into v;
+  insert into seqs (key, val) values (p_key, 1)
+    on conflict (key) do update set val = seqs.val + 1
+    returning val into v;
+  return v;
+end $$;
+
+create or replace function bump_allocation(p_user text, p_code text, p_consumed numeric, p_extra numeric)
+returns void language plpgsql as $$
+begin
+  insert into allocations (user_id, code, consumed, extra)
+    values (p_user, p_code, p_consumed, p_extra)
+    on conflict (user_id, code) do update
+      set consumed = allocations.consumed + p_consumed,
+          extra    = allocations.extra + p_extra;
+end $$;
+
+-- Atomic stock adjustment; raises if it would go negative.
+create or replace function bump_stock(p_store text, p_item text, p_dq numeric)
+returns numeric language plpgsql as $$
+declare v numeric;
+begin
+  insert into inventory (store_code, item_code, qty)
+    values (p_store, p_item, greatest(p_dq, 0))
+    on conflict (store_code, item_code) do update
+      set qty = inventory.qty + p_dq
+    returning qty into v;
+  if v < 0 then
+    raise exception 'Insufficient stock of % in %', p_item, p_store;
   end if;
   return v;
 end $$;
 
--- Atomic allocation bump (consumption / approved extra)
-create or replace function bump_allocation(p_user uuid, p_code text, p_consumed numeric, p_extra numeric)
-returns void language plpgsql security definer as $$
-begin
-  insert into allocations(user_id, code, consumed, extra)
-  values (p_user, p_code, p_consumed, p_extra)
-  on conflict (user_id, code) do update
-    set consumed = allocations.consumed + excluded.consumed,
-        extra    = allocations.extra    + excluded.extra;
-end $$;
-
--- Lock everything down: middleware uses the service role key which bypasses RLS.
-alter table customers        enable row level security;
-alter table departments      enable row level security;
-alter table locations        enable row level security;
-alter table uoms             enable row level security;
-alter table items            enable row level security;
-alter table price_lists      enable row level security;
-alter table price_list_lines enable row level security;
-alter table profiles         enable row level security;
-alter table allocations      enable row level security;
-alter table orders           enable row level security;
-alter table erp_docs         enable row level security;
-alter table erp_log          enable row level security;
-alter table sequences        enable row level security;
+-- ── lock the tables down (middleware uses the service role key) ────
+alter table masters       enable row level security;
+alter table profiles      enable row level security;
+alter table inventory     enable row level security;
+alter table carts         enable row level security;
+alter table notifications enable row level security;
+alter table allocations   enable row level security;
+alter table orders        enable row level security;
+alter table erp_docs      enable row level security;
+alter table erp_log       enable row level security;
+alter table seqs          enable row level security;

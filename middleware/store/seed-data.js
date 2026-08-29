@@ -1,82 +1,198 @@
-/** Master data per Mobile App SRS1 (08-07-26). Used by local mode and to generate Supabase seed. */
+/**
+ * Master data per Mobile App SRS2 (25-08-26) + "Data List" Excel workbooks
+ * (Master List.xls, Price List.xls, Store Inventory List Main Stores.xls,
+ *  Store Inventory Groups & Categories.xls).
+ * Used by local mode and to generate the Supabase seed.
+ *
+ * NOTE on item codes: the Price List workbook contains a few typo'd codes
+ * (PCSTHM→PCSHHM, PCSTCT→PCSHCT, FWBTHM→FWHMBT, FWBTGP→FEGPBT and a duplicated
+ * PCTRHM0001 that is clearly size 36 = PCTRHM0004). They are normalised here
+ * to the Item Master codes.
+ */
+
+const items = [
+  // ---- Head Protection ----
+  { code: "HPHTPE0001", name: "Hart Hat, Green",                                   uom: "PCS", group: "HP", cat: "HT", pic: "⛑️" },
+  { code: "HPHTPE0002", name: "Hart Hat, Red",                                     uom: "PCS", group: "HP", cat: "HT", pic: "⛑️" },
+  { code: "HPHTPE0003", name: "Hart Hat, Blue",                                    uom: "PCS", group: "HP", cat: "HT", pic: "⛑️" },
+  // ---- Eye & Face ----
+  { code: "EFSPPC0001", name: "Safety Spectacle, Clear",                           uom: "PCS", group: "EF", cat: "SP", pic: "🥽" },
+  { code: "EFSPPC0002", name: "Safety Spectacle, Grey",                            uom: "PCS", group: "EF", cat: "SP", pic: "🥽" },
+  { code: "EFGGNY0001", name: "Impact Goggle",                                     uom: "PCS", group: "EF", cat: "GG", pic: "🥽" },
+  // ---- Respiratory ----
+  { code: "RPDM950001", name: "N95 Dust Mask, 20 pcs/pkt",                         uom: "PKT", group: "RP", cat: "DM", pic: "😷" },
+  // ---- Protective Clothing ----
+  { code: "PCCVCT0001", name: "100% Cotton Coverall, Royal Blue, Size - Medium",   uom: "PCS", group: "PC", cat: "CV", pic: "🦺" },
+  { code: "PCCVCT0002", name: "100% Cotton Coverall, Royal Blue, Size - Large",    uom: "PCS", group: "PC", cat: "CV", pic: "🦺" },
+  { code: "PCCVCT0003", name: "100% Cotton Coverall, Royal Blue, Size - X Large",  uom: "PCS", group: "PC", cat: "CV", pic: "🦺" },
+  { code: "PCSHHM0001", name: "Hot Metal Shirt, Medium Blue, Size - Medium",       uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
+  { code: "PCSHHM0002", name: "Hot Metal Shirt, Medium Blue, Size - Large",        uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
+  { code: "PCSHHM0003", name: "Hot Metal Shirt, Medium Blue, Size - X Large",      uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
+  { code: "PCSHCT0001", name: "Poly Cotton Work Shirt, Khaki, Size - Medium",      uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
+  { code: "PCSHCT0002", name: "Poly Cotton Work Shirt, Khaki, Size - Large",       uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
+  { code: "PCSHCT0003", name: "Poly Cotton Work Shirt, Khaki, Size - X Large",     uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
+  { code: "PCTRHM0001", name: "Hot Metal Trouser, Medium Blue, Size - 30",         uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
+  { code: "PCTRHM0002", name: "Hot Metal Trouser, Medium Blue, Size - 32",         uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
+  { code: "PCTRHM0003", name: "Hot Metal Trouser, Medium Blue, Size - 34",         uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
+  { code: "PCTRHM0004", name: "Hot Metal Trouser, Medium Blue, Size - 36",         uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
+  { code: "PCTRCT0001", name: "Poly Cotton Work Trouser, Navy Blue, Size - 30",    uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
+  { code: "PCTRCT0002", name: "Poly Cotton Work Trouser, Navy Blue, Size - 32",    uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
+  { code: "PCTRCT0003", name: "Poly Cotton Work Trouser, Navy Blue, Size - 34",    uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
+  { code: "PCTRCT0004", name: "Poly Cotton Work Trouser, Navy Blue, Size - 36",    uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
+  { code: "PCVSPE0001", name: "Hi-Viz Vest, Yellow, Size - Medium",                uom: "PRS", group: "PC", cat: "VS", pic: "🦺" },
+  { code: "PCVSPE0002", name: "Hi-Viz Vest, Yellow, Size - Large",                 uom: "PRS", group: "PC", cat: "VS", pic: "🦺" },
+  { code: "PCVSPE0003", name: "Hi-Viz Vest, Yellow, Size - X Large",               uom: "PRS", group: "PC", cat: "VS", pic: "🦺" },
+  // ---- Gloves ----
+  { code: "GLHMCT0001", name: "Heat Resistant Gloves",                             uom: "PRS", group: "GL", cat: "HR", pic: "🧤" },
+  { code: "GLGPCT0001", name: "General Purpose Gloves, 12 prs/dp",                 uom: "DP",  group: "GL", cat: "GP", pic: "🧤" },
+  // ---- Foot Wear ----
+  { code: "FWHMBT0001", name: "Hot Metal Boots, Black, Size - 40",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
+  { code: "FWHMBT0002", name: "Hot Metal Boots, Black, Size - 41",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
+  { code: "FWHMBT0003", name: "Hot Metal Boots, Black, Size - 42",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
+  { code: "FWHMBT0004", name: "Hot Metal Boots, Black, Size - 43",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
+  { code: "FWHMBT0005", name: "Hot Metal Boots, Black, Size - 44",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
+  { code: "FEGPBT0001", name: "General Purpose Safety Boots, Brown, Size - 40",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
+  { code: "FEGPBT0002", name: "General Purpose Safety Boots, Brown, Size - 41",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
+  { code: "FEGPBT0003", name: "General Purpose Safety Boots, Brown, Size - 42",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
+  { code: "FEGPBT0004", name: "General Purpose Safety Boots, Brown, Size - 43",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
+  { code: "FEGPBT0005", name: "General Purpose Safety Boots, Brown, Size - 44",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" }
+].map(i => ({ desc: i.name, alias: i.name, ...i }));
+
+/* EGA Main Store opening stock — "Store Inventory List Main Stores.xls" */
+const mainStoreQty = {
+  HPHTPE0001: 25, HPHTPE0002: 25, HPHTPE0003: 25,
+  EFSPPC0001: 25, EFSPPC0002: 25, EFGGNY0001: 10,
+  RPDM950001: 50,
+  PCCVCT0001: 50, PCCVCT0002: 50, PCCVCT0003: 50,
+  PCSHHM0001: 50, PCSHHM0002: 50, PCSHHM0003: 50,
+  PCSHCT0001: 50, PCSHCT0002: 50, PCSHCT0003: 50,
+  PCTRHM0001: 50, PCTRHM0002: 50, PCTRHM0003: 50, PCTRHM0004: 50,
+  PCTRCT0001: 50, PCTRCT0002: 50, PCTRCT0003: 50, PCTRCT0004: 50,
+  PCVSPE0001: 50, PCVSPE0002: 50, PCVSPE0003: 50,
+  GLHMCT0001: 50, GLGPCT0001: 100,
+  FWHMBT0001: 20, FWHMBT0002: 20, FWHMBT0003: 20, FWHMBT0004: 20, FWHMBT0005: 20,
+  FEGPBT0001: 20, FEGPBT0002: 20, FEGPBT0003: 20, FEGPBT0004: 20, FEGPBT0005: 20
+};
+
 module.exports = {
   customers: [
-    { id: "C01", name: "Dubal",           address: "Jebel Ali, Dubai, UAE",       phone: "+971-4-8021111", email: "stores@dubal.ae" },
-    { id: "C02", name: "DXB Power Plant", address: "Al Aweer, Dubai, UAE",        phone: "+971-4-6081234", email: "procurement@dxbpower.ae" },
-    { id: "C03", name: "Emal",            address: "Al Taweelah, Abu Dhabi, UAE", phone: "+971-2-5092000", email: "stores@emal.ae" },
-    { id: "C04", name: "TWA Power Plant", address: "Taweelah, Abu Dhabi, UAE",    phone: "+971-2-5093500", email: "power.stores@twa.ae" },
-    { id: "C05", name: "TWA Refinery",    address: "Taweelah, Abu Dhabi, UAE",    phone: "+971-2-5094100", email: "refinery.stores@twa.ae" }
+    { id: "C01", name: "Dubai Aluminum",    address: "P. O. Box 1234, Dubai - UAE",     phone: "+971 4 223xxxx", fax: "+971 4 414xxxx", email: "dubal@gmail.com" },
+    { id: "C02", name: "Emirates Aluminum", address: "P. O. Box 5678, Abu Dhabi - UAE", phone: "+971 2 323xxxx", fax: "+971 4 512xxxx", email: "emal@gmail.com" }
   ],
-  departments: ["Pot Line", "Engg Dept", "Maintenance", "Reduction", "Smelting"],
-  locations: ["Location 1", "Location 2", "Location 3", "Location 4"],
-  uoms: ["PCS", "PKT", "PRS", "DOZ"],
-  items: [
-    { code: "PPE-SHOE-42",   name: "Safety Shoes Size 42",      desc: "Steel-toe leather safety shoes, S3 SRC, size 42",  alias: "Safety boots 42",  uom: "PRS", group: "Foot Protection", cat: "Safety Shoes",     pic: "🥾" },
-    { code: "PPE-SHOE-44",   name: "Safety Shoes Size 44",      desc: "Steel-toe leather safety shoes, S3 SRC, size 44",  alias: "Safety boots 44",  uom: "PRS", group: "Foot Protection", cat: "Safety Shoes",     pic: "🥾" },
-    { code: "PPE-GBOOT-43",  name: "Gum Boots Size 43",         desc: "PVC chemical-resistant gum boots, size 43",        alias: "Wellington 43",    uom: "PRS", group: "Foot Protection", cat: "Gum Boots",        pic: "👢" },
-    { code: "PPE-HAT-GRN",   name: "Hard Hat, Green",           desc: "HDPE safety helmet, ratchet suspension — green",   alias: "Helmet green",     uom: "PCS", group: "Head Protection", cat: "Hard Hats",        pic: "⛑️" },
-    { code: "PPE-HAT-WHT",   name: "Hard Hat, White",           desc: "HDPE safety helmet, ratchet suspension — white",   alias: "Helmet white",     uom: "PCS", group: "Head Protection", cat: "Hard Hats",        pic: "⛑️" },
-    { code: "PPE-CHINSTRAP", name: "Helmet Chin Strap",         desc: "Elastic chin strap for hard hats",                 alias: "Chin strap",       uom: "PCS", group: "Head Protection", cat: "Accessories",      pic: "🪢" },
-    { code: "PPE-GLV-GP",    name: "General Purpose Gloves",    desc: "Cotton-polyester knitted work gloves",             alias: "GP gloves",        uom: "PRS", group: "Hand Protection", cat: "General Gloves",   pic: "🧤" },
-    { code: "PPE-GLV-HEAT",  name: "Heat Resistant Gloves",     desc: "Aluminised heat-resistant gloves up to 500°C",     alias: "Furnace gloves",   uom: "PRS", group: "Hand Protection", cat: "Specialty Gloves", pic: "🧤" },
-    { code: "PPE-GLV-CHEM",  name: "Chemical Resistant Gloves", desc: "Nitrile chemical-resistant gauntlet gloves",       alias: "Nitrile gauntlet", uom: "PRS", group: "Hand Protection", cat: "Specialty Gloves", pic: "🧤" },
-    { code: "PPE-GOG-CLR",   name: "Safety Goggles, Clear",     desc: "Anti-fog clear polycarbonate goggles",             alias: "Clear goggles",    uom: "PCS", group: "Eye & Face",      cat: "Goggles",          pic: "🥽" },
-    { code: "PPE-FSHIELD",   name: "Face Shield",               desc: "Full face shield with browguard",                  alias: "Visor",            uom: "PCS", group: "Eye & Face",      cat: "Face Shields",     pic: "🛡️" },
-    { code: "PPE-COV-L",     name: "Coverall, Large",           desc: "Flame-retardant cotton coverall — large",          alias: "Boiler suit L",    uom: "PCS", group: "Body Protection", cat: "Coveralls",        pic: "🦺" },
-    { code: "PPE-COV-XL",    name: "Coverall, X-Large",         desc: "Flame-retardant cotton coverall — XL",             alias: "Boiler suit XL",   uom: "PCS", group: "Body Protection", cat: "Coveralls",        pic: "🦺" },
-    { code: "PPE-VEST-HV",   name: "Hi-Vis Vest, Orange",       desc: "High-visibility reflective vest — orange",         alias: "Reflective vest",  uom: "PCS", group: "Body Protection", cat: "Hi-Vis",           pic: "🦺" },
-    { code: "PPE-MASK-DUST", name: "Dust Masks (Pack of 10)",   desc: "FFP2 disposable dust masks, pack of 10",           alias: "FFP2 pack",        uom: "PKT", group: "Respiratory",     cat: "Masks",            pic: "😷" },
-    { code: "PPE-RESP-HALF", name: "Half-Face Respirator",      desc: "Reusable half-face respirator, A2P3 filters",      alias: "Half mask",        uom: "PCS", group: "Respiratory",     cat: "Respirators",      pic: "😷" },
-    { code: "PPE-EPLUG-DOZ", name: "Ear Plugs (Dozen)",         desc: "Foam ear plugs SNR 37 dB — dozen pairs",           alias: "Foam plugs",       uom: "DOZ", group: "Hearing",         cat: "Ear Plugs",        pic: "🎧" },
-    { code: "PPE-EMUFF",     name: "Ear Muffs",                 desc: "Over-head ear muffs SNR 31 dB",                    alias: "Ear defenders",    uom: "PCS", group: "Hearing",         cat: "Ear Muffs",        pic: "🎧" }
+
+  contracts: [
+    { ref: "50002834", customer: "C01", value: 500000.0, start: "2026-08-10", end: "2027-08-09" },
+    { ref: "60008792", customer: "C02", value: 450000.0, start: "2026-08-20", end: "2027-08-19" }
   ],
+
+  departments: [
+    { code: "PLDA", name: "Pot Line Dubal" },
+    { code: "EGDA", name: "Engineering Dubal" },
+    { code: "MNDA", name: "Maintenance Dubal" },
+    { code: "PLEA", name: "Pot Line Emal" },
+    { code: "EGEA", name: "Engineering Emal" },
+    { code: "MNEA", name: "Maintenance Emal" }
+  ],
+
+  locations: [
+    { code: "DA001", name: "Dubal1" }, { code: "DA002", name: "Dubal2" }, { code: "DA003", name: "Dubal3" },
+    { code: "EA001", name: "Emal1" },  { code: "EA002", name: "Emal2" },  { code: "EA003", name: "Emal3" }
+  ],
+
+  divisions: [
+    { code: "PSSEGA", name: "Prosafe EGA" },
+    { code: "PSSGNS", name: "Prosafe General" }
+  ],
+
+  /* Each Division has multiple stores. type: main | reservation.
+     Orders reserve stock by transferring Main → Reservation (Issue+Receipt vouchers);
+     Delivery Notes are issued from the Reservation store. */
+  stores: [
+    { code: "EGAMS", name: "EGA Main Store",           division: "PSSEGA", type: "main" },
+    { code: "EGADR", name: "Dubal Reservation Store",  division: "PSSEGA", type: "reservation" },
+    { code: "EGAER", name: "Emal Reservation Store",   division: "PSSEGA", type: "reservation" }
+  ],
+
+  groups: [
+    { code: "HP", name: "Head Protection" },
+    { code: "EF", name: "Eye & Face Protection" },
+    { code: "RP", name: "Respiratory Protection" },
+    { code: "PC", name: "Protective Clothing" },
+    { code: "GL", name: "Gloves" },
+    { code: "FW", name: "Foot Wear" }
+  ],
+
+  categories: [
+    { code: "HT", name: "Hard Hat" },       { code: "SP", name: "Spectacle" },
+    { code: "GG", name: "Goggle" },         { code: "DM", name: "Dust Mask" },
+    { code: "CV", name: "Coverall" },       { code: "ST", name: "Shirt" },
+    { code: "TR", name: "Trouser" },        { code: "VS", name: "Vest" },
+    { code: "HR", name: "Heat Resistant" }, { code: "GP", name: "General Purpose" },
+    { code: "HM", name: "Hot Metal" }
+  ],
+
+  uoms: ["PCS", "PKT", "PRS", "DOZ", "DP"],
+
+  items,
+
+  /* Opening inventory per store (reservation stores start empty and are filled
+     by order-time stock transfers from the Main store). */
+  inventory: {
+    EGAMS: mainStoreQty,
+    EGADR: {},
+    EGAER: {}
+  },
+
+  /* Price List Master — header per SRS2 (code, description, start/end date,
+     delivery period in days) + table as in the "Price list" Excel sheet.
+     A line may carry several item codes (size variants sharing one allocation);
+     `restricted: true` = the allocated qty limit is enforced ("Qty Restricted -
+     Yes"): within limit → Order Cart, beyond limit → Approval Cart. */
   priceLists: [
-    { id: "PL1", name: "Price List 1", contract: "600024", customer: "C01", validFrom: "2026-01-01", validTill: "2026-12-31", lines: [
-      { code: "PPE-SHOE-42",   price: 150.0, alloc: 2,  restricted: false },
-      { code: "PPE-SHOE-44",   price: 150.0, alloc: 2,  restricted: false },
-      { code: "PPE-HAT-GRN",   price: 50.0,  alloc: 2,  restricted: false },
-      { code: "PPE-GLV-GP",    price: 5.0,   alloc: 12, restricted: false },
-      { code: "PPE-GLV-HEAT",  price: 85.0,  alloc: 2,  restricted: true  },
-      { code: "PPE-GOG-CLR",   price: 18.0,  alloc: 4,  restricted: false },
-      { code: "PPE-COV-L",     price: 95.0,  alloc: 4,  restricted: false },
-      { code: "PPE-MASK-DUST", price: 35.0,  alloc: 6,  restricted: false },
-      { code: "PPE-EPLUG-DOZ", price: 22.0,  alloc: 4,  restricted: false },
-      { code: "PPE-VEST-HV",   price: 28.0,  alloc: 2,  restricted: false }
+    { id: "PL1", name: "PPE Price List1", desc: "Supply of PPE", contract: "50002834", customer: "C01",
+      validFrom: "2026-08-10", validTill: "2026-11-09", deliveryPeriod: 2, lines: [
+      { sl: 1, codes: ["HPHTPE0001"], uom: "PCS", price: 15.0,  alloc: 2,  restricted: true },
+      { sl: 2, codes: ["EFSPPC0002"], uom: "PCS", price: 30.0,  alloc: 3,  restricted: true },
+      { sl: 3, codes: ["RPDM950001"], uom: "PKT", price: 50.0,  alloc: 5,  restricted: true },
+      { sl: 4, codes: ["PCSHHM0001", "PCSHHM0002", "PCSHHM0003"], uom: "PCS", price: 225.0, alloc: 3, restricted: true },
+      { sl: 5, codes: ["PCTRHM0001", "PCTRHM0002", "PCTRHM0003", "PCTRHM0004"], uom: "PCS", price: 230.0, alloc: 3, restricted: true },
+      { sl: 6, codes: ["GLHMCT0001"], uom: "PRS", price: 20.0,  alloc: 10, restricted: true },
+      { sl: 7, codes: ["GLGPCT0001"], uom: "DP",  price: 15.0,  alloc: 20, restricted: true },
+      { sl: 8, codes: ["FWHMBT0001", "FWHMBT0002", "FWHMBT0003", "FWHMBT0004", "FWHMBT0005"], uom: "PRS", price: 600.0, alloc: 1, restricted: true }
     ]},
-    { id: "PL2", name: "Price List 2", contract: "700050", customer: "C03", validFrom: "2026-03-01", validTill: "2027-02-28", lines: [
-      { code: "PPE-SHOE-44",   price: 145.0, alloc: 2, restricted: false },
-      { code: "PPE-GBOOT-43",  price: 75.0,  alloc: 2, restricted: false },
-      { code: "PPE-HAT-WHT",   price: 48.0,  alloc: 2, restricted: false },
-      { code: "PPE-CHINSTRAP", price: 8.0,   alloc: 4, restricted: false },
-      { code: "PPE-GLV-CHEM",  price: 32.0,  alloc: 6, restricted: false },
-      { code: "PPE-FSHIELD",   price: 45.0,  alloc: 2, restricted: true  },
-      { code: "PPE-COV-XL",    price: 95.0,  alloc: 4, restricted: false },
-      { code: "PPE-RESP-HALF", price: 120.0, alloc: 1, restricted: true  },
-      { code: "PPE-EMUFF",     price: 55.0,  alloc: 2, restricted: false }
+    { id: "PL2", name: "PPE Price List2", desc: "Supply of PPE", contract: "50002834", customer: "C01",
+      validFrom: "2026-08-15", validTill: "2026-11-14", deliveryPeriod: 2, lines: [
+      { sl: 1, codes: ["HPHTPE0002"], uom: "PCS", price: 15.0, alloc: 2, restricted: true },
+      { sl: 2, codes: ["EFSPPC0001"], uom: "PCS", price: 10.0, alloc: 3, restricted: true },
+      { sl: 3, codes: ["EFGGNY0001"], uom: "PCS", price: 15.0, alloc: 2, restricted: true },
+      { sl: 4, codes: ["RPDM950001"], uom: "PKT", price: 50.0, alloc: 5, restricted: true },
+      { sl: 5, codes: ["PCSHCT0001", "PCSHCT0002", "PCSHCT0003"], uom: "PCS", price: 85.0, alloc: 3, restricted: true },
+      { sl: 6, codes: ["PCTRCT0001", "PCTRCT0002", "PCTRCT0003", "PCTRCT0004"], uom: "PCS", price: 80.0, alloc: 3, restricted: true },
+      { sl: 7, codes: ["PCVSPE0001", "PCVSPE0002", "PCVSPE0003"], uom: "PRS", price: 25.0, alloc: 2, restricted: true },
+      { sl: 8, codes: ["GLGPCT0001"], uom: "DP", price: 15.0, alloc: 10, restricted: true },
+      { sl: 9, codes: ["FEGPBT0001", "FEGPBT0002", "FEGPBT0003", "FEGPBT0004", "FEGPBT0005"], uom: "PRS", price: 175.0, alloc: 2, restricted: true }
     ]},
-    { id: "PL3", name: "Price List 3", contract: "800075", customer: "C04", validFrom: "2026-05-01", validTill: "2027-04-30", lines: [
-      { code: "PPE-SHOE-42",   price: 148.0, alloc: 2,  restricted: false },
-      { code: "PPE-HAT-GRN",   price: 50.0,  alloc: 2,  restricted: false },
-      { code: "PPE-GLV-GP",    price: 5.5,   alloc: 12, restricted: false },
-      { code: "PPE-GOG-CLR",   price: 18.5,  alloc: 4,  restricted: false },
-      { code: "PPE-VEST-HV",   price: 28.0,  alloc: 3,  restricted: false },
-      { code: "PPE-MASK-DUST", price: 36.0,  alloc: 6,  restricted: false }
-    ]},
-    { id: "PL4", name: "Price List 4", contract: "900010", customer: "C05", validFrom: "2026-06-01", validTill: "2027-05-31", lines: [
-      { code: "PPE-SHOE-44",   price: 150.0, alloc: 2, restricted: false },
-      { code: "PPE-HAT-WHT",   price: 52.0,  alloc: 2, restricted: false },
-      { code: "PPE-GLV-CHEM",  price: 33.0,  alloc: 6, restricted: false },
-      { code: "PPE-COV-L",     price: 98.0,  alloc: 4, restricted: false },
-      { code: "PPE-EPLUG-DOZ", price: 23.0,  alloc: 4, restricted: false }
+    { id: "PL3", name: "PPE Price List3", desc: "Supply of PPE", contract: "60008792", customer: "C02",
+      validFrom: "2026-08-20", validTill: "2026-11-19", deliveryPeriod: 2, lines: [
+      { sl: 1, codes: ["HPHTPE0003"], uom: "PCS", price: 15.0, alloc: 0, restricted: true },
+      { sl: 2, codes: ["EFSPPC0002"], uom: "PCS", price: 10.0, alloc: 3, restricted: true },
+      { sl: 3, codes: ["EFGGNY0001"], uom: "PCS", price: 15.0, alloc: 2, restricted: true },
+      { sl: 4, codes: ["RPDM950001"], uom: "PKT", price: 50.0, alloc: 5, restricted: true },
+      { sl: 5, codes: ["PCCVCT0001", "PCCVCT0002", "PCCVCT0003"], uom: "PCS", price: 100.0, alloc: 3, restricted: true },
+      { sl: 6, codes: ["PCVSPE0001", "PCVSPE0002", "PCVSPE0003"], uom: "PRS", price: 25.0, alloc: 2, restricted: true },
+      { sl: 7, codes: ["GLGPCT0001"], uom: "DP", price: 15.0, alloc: 10, restricted: true },
+      { sl: 8, codes: ["FEGPBT0001", "FEGPBT0002", "FEGPBT0003", "FEGPBT0004", "FEGPBT0005"], uom: "PRS", price: 175.0, alloc: 2, restricted: true }
     ]}
   ],
+
   /* Local-demo-mode logins only (password for all: prosafe1). In Supabase mode, users sign up themselves. */
   demoUsers: [
-    { id: "local-e1001", empId: "E1001", name: "Ahmed Al Mansoori", email: "ahmed.m@dubal.ae",  phone: "+971-50-1234567", customer: "C01", dept: "Pot Line",    priceList: "PL1", role: "employee", active: true },
-    { id: "local-e1002", empId: "E1002", name: "Ravi Kumar",        email: "ravi.k@emal.ae",    phone: "+971-55-2345678", customer: "C03", dept: "Maintenance", priceList: "PL2", role: "employee", active: true },
-    { id: "local-e1003", empId: "E1003", name: "Sara Khan",         email: "sara.k@twa.ae",     phone: "+971-56-3456789", customer: "C04", dept: "Engg Dept",   priceList: "PL3", role: "employee", active: true },
-    { id: "local-a2001", empId: "A2001", name: "Mohammed Hassan",   email: "m.hassan@ega.ae",   phone: "+971-50-9876543", customer: "C03", dept: "Engg Dept",   priceList: null,  role: "approver", active: true },
-    { id: "local-s3001", empId: "S3001", name: "PROSAFE Stores",    email: "stores@prosafe.ae", phone: "+971-4-3334455",  customer: null,  dept: null,          priceList: null,  role: "admin",    active: true }
+    { id: "local-e1001", empId: "ID001", name: "Ahmed Al Mansoori", email: "ahmed.m@dubal.ae",  phone: "+971 50 xxxxxx1", customer: "C01", dept: "PLDA", location: "DA001", priceLists: ["PL1", "PL2"], fromStore: "EGAMS", toStore: "EGADR", role: "employee", active: true },
+    { id: "local-e1002", empId: "ID007", name: "Ravi Kumar",        email: "ravi.k@emal.ae",    phone: "+971 50 xxxxxx7", customer: "C02", dept: "PLEA", location: "EA001", priceLists: ["PL3"],        fromStore: "EGAMS", toStore: "EGAER", role: "employee", active: true },
+    { id: "local-e1003", empId: "ID003", name: "Sara Khan",         email: "sara.k@twa.ae",     phone: "+971 50 xxxxxx3", customer: "C01", dept: "EGDA", location: "DA002", priceLists: ["PL2"],        fromStore: "EGAMS", toStore: "EGADR", role: "employee", active: true },
+    { id: "local-a2001", empId: "A2001", name: "Mohammed Hassan",   email: "m.hassan@ega.ae",   phone: "+971 50 9876543", customer: "C01", dept: "EGDA", location: null,    priceLists: [],             fromStore: null,    toStore: null,    role: "approver", active: true },
+    { id: "local-s3001", empId: "S3001", name: "PROSAFE Stores",    email: "stores@prosafe.ae", phone: "+971 4 3334455",  customer: null,  dept: null,   location: null,    priceLists: [],             fromStore: null,    toStore: null,    role: "admin",    active: true }
   ],
-  seq: { or: 1000, so: 5000, dn: 3000, inv: 9000, ret: 7000, emp: 1003 }
+
+  seq: { or: 1000, so: 5000, dn: 3000, inv: 9000, ret: 7000, cn: 7500, stv: 6000, emp: 1003 }
 };

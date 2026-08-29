@@ -75,7 +75,8 @@ async function signup({ email, password, name, phone }) {
     id: userId, email, name: String(name).trim(), phone: phone || "",
     empId: "E" + empNum,
     role: isAdmin ? "admin" : "employee",
-    customer: null, dept: null, priceList: null,
+    customer: null, dept: null, location: null,
+    priceList: null, priceLists: [], fromStore: null, toStore: null,
     active: isAdmin, createdAt: new Date().toISOString()
   });
   if (!SUPA) session = { token: signLocal(profile), refreshToken: null };
