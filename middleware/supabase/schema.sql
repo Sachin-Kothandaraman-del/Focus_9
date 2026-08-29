@@ -107,6 +107,20 @@ create table if not exists seqs (
 );
 
 -- ── atomic helpers ─────────────────────────────────────────────────
+-- Drop any v2 versions first (their return/argument types may differ,
+-- and CREATE OR REPLACE cannot change those).
+do $$
+declare r record;
+begin
+  for r in
+    select oid::regprocedure as sig
+    from pg_proc
+    where proname in ('next_seq', 'bump_allocation', 'bump_stock')
+  loop
+    execute 'drop function ' || r.sig;
+  end loop;
+end $$;
+
 create or replace function next_seq(p_key text) returns bigint
 language plpgsql as $$
 declare v bigint;
