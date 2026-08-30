@@ -60,6 +60,12 @@ label.f { display: block; font-size: .7rem; font-weight: 700; color: var(--mut);
 .notifbadge .notiflist div { margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,.08); padding-bottom: 4px; }
 .shophead { border-left: 4px solid var(--orange); }
 
+/* size / colour variant picker on a shop card */
+.variants { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin: 2px 0 4px; }
+.variants button { border: 1.5px solid var(--line); background: #fff; color: var(--ink); border-radius: 7px; padding: 3px 8px; font-size: .7rem; cursor: pointer; }
+.variants button:hover { border-color: var(--navy); }
+.variants button.on { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 700; }
+
 /* modal */
 .modalwrap { position: fixed; inset: 0; background: rgba(10,25,40,.5); display: flex; align-items: center; justify-content: center; z-index: 40; padding: 20px; }
 .modal { background: var(--bg); border-radius: 16px; padding: 22px; width: 100%; max-width: 960px; max-height: 90vh; overflow: auto; }

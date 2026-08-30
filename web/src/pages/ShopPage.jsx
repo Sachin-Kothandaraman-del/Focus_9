@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useApp } from "../App.jsx";
-import { Chip, Empty, ShopHeader, fmt } from "../ui.jsx";
+import { Chip, Empty, ShopHeader, fmt, variantLabel, variantKind } from "../ui.jsx";
 
 /* Shopping List Page (SRS2): one shopping tab per assigned price list; items
    filtered by Groups & Categories; live Main-store stock on every item;
@@ -100,10 +100,18 @@ export default function ShopPage() {
               <div className="nm">{selected.name}</div>
               <div className="xs mut">{selected.code} · {l.uom}</div>
               {l.items.length > 1 && (
-                <select value={selected.code} onChange={e => setSizeSel({ ...sizeSel, [l.key]: e.target.value })}
-                  style={{ fontSize: ".72rem", padding: "5px 8px" }}>
-                  {l.items.map(i => <option key={i.code} value={i.code}>{i.name}</option>)}
-                </select>
+                <>
+                  <div className="xs mut" style={{ marginTop: 2 }}>{variantKind(l.items)}</div>
+                  <div className="variants">
+                    {l.items.map(i => (
+                      <button key={i.code} type="button" title={`${i.name} · stock ${i.stock}`}
+                        className={i.code === selected.code ? "on" : ""}
+                        onClick={() => setSizeSel({ ...sizeSel, [l.key]: i.code })}>
+                        {variantLabel(i)}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
               <div className="row" style={{ gap: 6 }}>
                 <span className="b" style={{ color: "#0f2a43" }}>AED {fmt(l.price)}</span>

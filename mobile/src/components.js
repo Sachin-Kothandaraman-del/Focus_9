@@ -3,6 +3,18 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "rea
 import { C, STATUS } from "./theme";
 
 export const fmt = n => Number(n || 0).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/* Short label for a size/colour variant: "…, Size - 30" → "30" · "Hart Hat, Green" → "Green" */
+export const variantLabel = item => {
+  const n = String((item && item.name) || "");
+  const size = n.split(/Size\s*[-–]\s*/i);
+  if (size.length > 1) return size.pop().trim();
+  const parts = n.split(",");
+  if (parts.length > 1) return parts.pop().trim();
+  return (item && item.code) || n;
+};
+export const variantKind = (items = []) =>
+  items.some(i => /Size\s*[-–]/i.test(String(i.name || ""))) ? "Size" : "Colour";
 export const fmtDT = iso => {
   const d = new Date(iso);
   return d.toLocaleDateString("en-GB") + " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });

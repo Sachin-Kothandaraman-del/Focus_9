@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Alert, RefreshControl } from "react-native";
 import { useStore } from "../store";
-import { Card, Chip, fmt, Loading, Empty } from "../components";
+import { Card, Chip, fmt, Loading, Empty, variantLabel, variantKind } from "../components";
 import { C } from "../theme";
 
 /* Shopping List (SRS2): one tab per assigned price list, header with contract /
@@ -119,16 +119,19 @@ export default function ShopScreen() {
               <Text style={{ fontWeight: "700", fontSize: 12, minHeight: 44 }}>{selected.name}</Text>
               <Text style={{ color: C.mut, fontSize: 10 }}>{selected.code} · {l.uom}</Text>
               {l.items.length > 1 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 4 }}>
-                  {l.items.map(i => (
-                    <TouchableOpacity key={i.code} onPress={() => setSizeSel({ ...sizeSel, [l.key]: i.code })}
-                      style={[s.size, selected.code === i.code && { backgroundColor: C.navy, borderColor: C.navy }]}>
-                      <Text style={{ fontSize: 9, color: selected.code === i.code ? "#fff" : C.ink }}>
-                        {(i.name.split("Size -").pop() || i.code).trim().replace(/^– ?/, "")}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                <>
+                  <Text style={{ fontSize: 9, color: C.mut, marginTop: 2 }}>{variantKind(l.items)}</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 3 }}>
+                    {l.items.map(i => (
+                      <TouchableOpacity key={i.code} onPress={() => setSizeSel({ ...sizeSel, [l.key]: i.code })}
+                        style={[s.size, selected.code === i.code && { backgroundColor: C.navy, borderColor: C.navy }]}>
+                        <Text style={{ fontSize: 9, color: selected.code === i.code ? "#fff" : C.ink }}>
+                          {variantLabel(i)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </>
               )}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
                 <Text style={{ fontWeight: "800", color: C.navy }}>AED {fmt(l.price)}</Text>

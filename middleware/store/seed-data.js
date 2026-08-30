@@ -153,7 +153,9 @@ module.exports = {
   priceLists: [
     { id: "PL1", name: "PPE Price List1", desc: "Supply of PPE", contract: "50002834", customer: "C01",
       validFrom: "2026-08-10", validTill: "2026-11-09", deliveryPeriod: 2, lines: [
-      { sl: 1, codes: ["HPHTPE0001"], uom: "PCS", price: 15.0,  alloc: 2,  restricted: true },
+      // Hard hat offered in Green / Red / Blue — the employee picks the colour on
+      // the shopping screen; the allocated qty is shared across the colours.
+      { sl: 1, codes: ["HPHTPE0001", "HPHTPE0002", "HPHTPE0003"], uom: "PCS", price: 15.0,  alloc: 2,  restricted: true },
       { sl: 2, codes: ["EFSPPC0002"], uom: "PCS", price: 30.0,  alloc: 3,  restricted: true },
       { sl: 3, codes: ["RPDM950001"], uom: "PKT", price: 50.0,  alloc: 5,  restricted: true },
       { sl: 4, codes: ["PCSHHM0001", "PCSHHM0002", "PCSHHM0003"], uom: "PCS", price: 225.0, alloc: 3, restricted: true },
@@ -164,7 +166,7 @@ module.exports = {
     ]},
     { id: "PL2", name: "PPE Price List2", desc: "Supply of PPE", contract: "50002834", customer: "C01",
       validFrom: "2026-08-15", validTill: "2026-11-14", deliveryPeriod: 2, lines: [
-      { sl: 1, codes: ["HPHTPE0002"], uom: "PCS", price: 15.0, alloc: 2, restricted: true },
+      { sl: 1, codes: ["HPHTPE0002", "HPHTPE0001", "HPHTPE0003"], uom: "PCS", price: 15.0, alloc: 2, restricted: true },
       { sl: 2, codes: ["EFSPPC0001"], uom: "PCS", price: 10.0, alloc: 3, restricted: true },
       { sl: 3, codes: ["EFGGNY0001"], uom: "PCS", price: 15.0, alloc: 2, restricted: true },
       { sl: 4, codes: ["RPDM950001"], uom: "PKT", price: 50.0, alloc: 5, restricted: true },
@@ -176,7 +178,7 @@ module.exports = {
     ]},
     { id: "PL3", name: "PPE Price List3", desc: "Supply of PPE", contract: "60008792", customer: "C02",
       validFrom: "2026-08-20", validTill: "2026-11-19", deliveryPeriod: 2, lines: [
-      { sl: 1, codes: ["HPHTPE0003"], uom: "PCS", price: 15.0, alloc: 0, restricted: true },
+      { sl: 1, codes: ["HPHTPE0003", "HPHTPE0001", "HPHTPE0002"], uom: "PCS", price: 15.0, alloc: 0, restricted: true },
       { sl: 2, codes: ["EFSPPC0002"], uom: "PCS", price: 10.0, alloc: 3, restricted: true },
       { sl: 3, codes: ["EFGGNY0001"], uom: "PCS", price: 15.0, alloc: 2, restricted: true },
       { sl: 4, codes: ["RPDM950001"], uom: "PKT", price: 50.0, alloc: 5, restricted: true },

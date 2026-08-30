@@ -18,6 +18,21 @@ export const STATUS = {
   rejected:           { label: "Rejected",             color: "#d64545" }
 };
 
+/* Short label for a size/colour variant of one price-list line:
+   "Hot Metal Trouser, …, Size - 30" → "30" · "Hart Hat, Green" → "Green" */
+export function variantLabel(item) {
+  const n = String(item?.name || "");
+  const size = n.split(/Size\s*[-–]\s*/i);
+  if (size.length > 1) return size.pop().trim();
+  const parts = n.split(",");
+  if (parts.length > 1) return parts.pop().trim();
+  return item?.code || n;
+}
+/* "Size" when the variants differ by size, otherwise "Colour / option". */
+export function variantKind(items = []) {
+  return items.some(i => /Size\s*[-–]/i.test(String(i.name || ""))) ? "Size" : "Colour";
+}
+
 export function Chip({ label, color = "#6b7c8d" }) {
   return <span className="chip" style={{ background: color + "22", color }}>{label}</span>;
 }
