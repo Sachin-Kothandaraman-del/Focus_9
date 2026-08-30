@@ -92,7 +92,11 @@ export default function ShopPage() {
           const cartQty = l.items.reduce((s, i) => s + cartQtyOf(i.code), 0);
           return (
             <div className="item" key={l.key} style={cartQty > 0 ? { border: "2px solid #1e9e6a" } : undefined}>
-              <div className="pic">{selected.pic}</div>
+              <div className="pic">
+                {selected.img
+                  ? <img src={selected.img} alt={selected.name} style={{ width: 86, height: 86, objectFit: "contain", borderRadius: 8 }} />
+                  : selected.pic}
+              </div>
               <div className="nm">{selected.name}</div>
               <div className="xs mut">{selected.code} · {l.uom}</div>
               {l.items.length > 1 && (

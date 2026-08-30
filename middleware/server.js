@@ -350,7 +350,7 @@ app.get("/api/catalog", requireAuth("employee"), wrap(async (req, res) => {
         cat: m.categories.find(c => c.code === (m.items.find(i => i.code === l.codes[0]) || {}).cat) || null,
         items: l.codes.map(c => {
           const i = m.items.find(x => x.code === c) || { code: c, name: c, uom: l.uom, pic: "📦" };
-          return { code: i.code, name: i.name, uom: i.uom, pic: i.pic, stock: stockOf(c) };
+          return { code: i.code, name: i.name, uom: i.uom, pic: i.pic, img: i.img || null, stock: stockOf(c) };
         })
       }))
     });
@@ -367,7 +367,7 @@ async function cartDTO(u) {
     const pl = plById(m, l.plId);
     const dp = pl ? pl.deliveryPeriod : 0;
     return {
-      ...l, name: item.name, pic: item.pic,
+      ...l, name: item.name, pic: item.pic, img: item.img || null,
       amount: round2(l.qty * l.price),
       stockStatus: l.reservedQty >= l.qty ? "yes" : l.reservedQty > 0 ? "partial" : "no",
       deliveryDate: l.reservedQty > 0 ? addDays(nowIso(), dp) : null,

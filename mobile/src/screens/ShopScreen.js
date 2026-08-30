@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, RefreshControl } from "react-native";
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Alert, RefreshControl } from "react-native";
 import { useStore } from "../store";
 import { Card, Chip, fmt, Loading, Empty } from "../components";
 import { C } from "../theme";
@@ -113,7 +113,9 @@ export default function ShopScreen() {
           const lineQty = l.items.reduce((s2, i) => s2 + cartQtyOf(i.code), 0);
           return (
             <Card key={l.key} style={[{ width: "48.5%" }, lineQty > 0 && { borderWidth: 2, borderColor: C.green }]}>
-              <Text style={{ fontSize: 34, textAlign: "center", marginVertical: 6 }}>{selected.pic}</Text>
+              {selected.img
+                ? <Image source={{ uri: selected.img }} style={{ width: 84, height: 84, alignSelf: "center", marginVertical: 6, borderRadius: 8 }} resizeMode="contain" />
+                : <Text style={{ fontSize: 34, textAlign: "center", marginVertical: 6 }}>{selected.pic}</Text>}
               <Text style={{ fontWeight: "700", fontSize: 12, minHeight: 44 }}>{selected.name}</Text>
               <Text style={{ color: C.mut, fontSize: 10 }}>{selected.code} · {l.uom}</Text>
               {l.items.length > 1 && (

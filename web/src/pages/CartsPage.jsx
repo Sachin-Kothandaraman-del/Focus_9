@@ -57,7 +57,12 @@ export default function CartsPage() {
               <tbody>
                 {lines.map(x => (
                   <tr key={x.id}>
-                    <td>{x.pic} <span className="b">{x.name}</span><br /><span className="xs mut">{x.code} · {x.uom}</span></td>
+                    <td>
+                      {x.img
+                        ? <img src={x.img} alt="" style={{ width: 34, height: 34, objectFit: "contain", borderRadius: 6, verticalAlign: "middle", marginRight: 6 }} />
+                        : <>{x.pic} </>}
+                      <span className="b">{x.name}</span><br /><span className="xs mut">{x.code} · {x.uom}</span>
+                    </td>
                     <td className="num">{x.qty}</td>
                     <td>
                       <StockChip stock={x.stockStatus} />

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, Modal, StyleSheet } from "react-native";
+import { View, Text, Image, ScrollView, TouchableOpacity, Alert, Modal, StyleSheet } from "react-native";
 import { useStore } from "../store";
 import { api } from "../api";
 import { Card, Btn, Chip, fmt, Empty } from "../components";
@@ -49,7 +49,9 @@ export default function CartsScreen({ navigation }) {
             <>
               {lines.map(x => (
                 <View key={x.id} style={s.line}>
-                  <Text style={{ fontSize: 22, marginRight: 10 }}>{x.pic}</Text>
+                  {x.img
+                    ? <Image source={{ uri: x.img }} style={{ width: 34, height: 34, marginRight: 10, borderRadius: 6 }} resizeMode="contain" />
+                    : <Text style={{ fontSize: 22, marginRight: 10 }}>{x.pic}</Text>}
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: "700", fontSize: 13 }}>{x.name}</Text>
                     <Text style={{ color: C.mut, fontSize: 11 }}>{x.qty} {x.uom} × AED {fmt(x.price)}</Text>

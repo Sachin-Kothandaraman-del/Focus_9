@@ -5,7 +5,7 @@ const seed = require("./seed-data");
 
 const DATA_DIR = path.join(__dirname, "..", "data");
 const DATA_FILE = path.join(DATA_DIR, "db.json");
-const DB_VERSION = 3; // SRS2 (25-08-26) data model
+const DB_VERSION = 4; // SRS2 (25-08-26) data model + real item photos
 let db = null;
 
 const clone = x => JSON.parse(JSON.stringify(x));
