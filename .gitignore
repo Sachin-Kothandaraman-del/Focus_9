@@ -4,3 +4,4 @@ dist/
 *.log
 .env
 middleware/data/
+_to_delete/
