@@ -10,7 +10,9 @@
  * to the Item Master codes.
  */
 
-const ITEM_IMAGES = require("./item-images"); // real product photos (data URIs)
+/* Product photos are NOT stored here or in the database — they live in
+   ./item-images.js and are merged in by the middleware when it serves the
+   catalog. That keeps the master data (and supabase/seed.sql) small. */
 
 const items = [
   // ---- Head Protection ----
@@ -58,7 +60,7 @@ const items = [
   { code: "FEGPBT0003", name: "General Purpose Safety Boots, Brown, Size - 42",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
   { code: "FEGPBT0004", name: "General Purpose Safety Boots, Brown, Size - 43",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
   { code: "FEGPBT0005", name: "General Purpose Safety Boots, Brown, Size - 44",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" }
-].map(i => ({ desc: i.name, alias: i.name, img: ITEM_IMAGES[i.code] || null, ...i }));
+].map(i => ({ desc: i.name, alias: i.name, ...i }));
 
 /* EGA Main Store opening stock — "Store Inventory List Main Stores.xls" */
 const mainStoreQty = {

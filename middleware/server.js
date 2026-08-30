@@ -29,6 +29,10 @@ const cors = require("cors");
 const store = require("./store");
 const authsvc = require("./auth");
 const { safeCall } = require("./erp");
+/* Real product photos (data URIs) keyed by item code. Kept in code rather than
+   in the database so master data stays small; see tools/build-item-images.py. */
+const ITEM_IMAGES = require("./store/item-images");
+const imgOf = item => (item && (item.img || ITEM_IMAGES[item.code])) || null;
 
 const app = express();
 app.use(cors());
@@ -350,7 +354,7 @@ app.get("/api/catalog", requireAuth("employee"), wrap(async (req, res) => {
         cat: m.categories.find(c => c.code === (m.items.find(i => i.code === l.codes[0]) || {}).cat) || null,
         items: l.codes.map(c => {
           const i = m.items.find(x => x.code === c) || { code: c, name: c, uom: l.uom, pic: "📦" };
-          return { code: i.code, name: i.name, uom: i.uom, pic: i.pic, img: i.img || null, stock: stockOf(c) };
+          return { code: i.code, name: i.name, uom: i.uom, pic: i.pic, img: imgOf(i), stock: stockOf(c) };
         })
       }))
     });
@@ -367,7 +371,7 @@ async function cartDTO(u) {
     const pl = plById(m, l.plId);
     const dp = pl ? pl.deliveryPeriod : 0;
     return {
-      ...l, name: item.name, pic: item.pic, img: item.img || null,
+      ...l, name: item.name, pic: item.pic, img: imgOf(item),
       amount: round2(l.qty * l.price),
       stockStatus: l.reservedQty >= l.qty ? "yes" : l.reservedQty > 0 ? "partial" : "no",
       deliveryDate: l.reservedQty > 0 ? addDays(nowIso(), dp) : null,
