@@ -3,8 +3,8 @@
 --
 -- Paste this ENTIRE file into Supabase → SQL Editor and press Run.
 -- It performs, in order:  v2→v3 migration → schema → seed data.
--- Safe to re-run (idempotent). Keeps user accounts and does not
--- overwrite live inventory quantities.
+-- Safe to re-run (idempotent): keeps user accounts, keeps the price-list
+-- assignments the admin has made, and does not overwrite live inventory.
 --
 -- Product photos are NOT in this file — the middleware serves them from
 -- middleware/store/item-images.js, so nothing here is oversized.
@@ -43,14 +43,27 @@ alter table if exists profiles drop constraint if exists profiles_customer_fkey;
 alter table if exists profiles drop constraint if exists profiles_dept_fkey;
 alter table if exists profiles drop constraint if exists profiles_location_fkey;
 
+-- Roles gained "store" (SRS2 Store Module) — the old CHECK constraint only
+-- allowed employee/approver/admin and would reject it.
+do $$ begin
+  if exists (select 1 from information_schema.tables where table_name = 'profiles') then
+    alter table if exists profiles drop constraint if exists profiles_role_check;
+    alter table profiles add constraint profiles_role_check
+      check (role in ('employee','approver','store','admin'));
+  end if;
+end $$;
+
 alter table if exists profiles add column if not exists location    text;
 alter table if exists profiles add column if not exists price_lists jsonb not null default '[]';
 alter table if exists profiles add column if not exists from_store  text;
 alter table if exists profiles add column if not exists to_store    text;
 
--- reset shopping assignments (old PL ids don't match the new price lists)
+-- Reset shopping assignments ONLY on the first v2 -> v3 migration (the old
+-- PL ids don't match the new price lists). On a re-run the v3 `masters`
+-- table already exists, so assignments the admin has made are left alone.
 do $$ begin
-  if exists (select 1 from information_schema.tables where table_name = 'profiles') then
+  if not exists (select 1 from information_schema.tables where table_name = 'masters')
+     and exists (select 1 from information_schema.tables where table_name = 'profiles') then
     update profiles set price_list = null, price_lists = '[]'::jsonb;
   end if;
 end $$;
@@ -110,7 +123,7 @@ create table if not exists profiles (
   name        text not null,
   phone       text default '',
   emp_id      text default '',
-  role        text not null default 'employee' check (role in ('employee','approver','admin')),
+  role        text not null default 'employee' check (role in ('employee','approver','store','admin')),
   customer    text,
   dept        text,
   location    text,

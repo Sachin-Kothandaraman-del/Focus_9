@@ -27,13 +27,30 @@ alter table profiles drop constraint if exists profiles_customer_fkey;
 alter table profiles drop constraint if exists profiles_dept_fkey;
 alter table profiles drop constraint if exists profiles_location_fkey;
 
+-- Roles gained "store" (SRS2 Store Module) — the old CHECK constraint only
+-- allowed employee/approver/admin and would reject it.
+do $$ begin
+  if exists (select 1 from information_schema.tables where table_name = 'profiles') then
+    alter table profiles drop constraint if exists profiles_role_check;
+    alter table profiles add constraint profiles_role_check
+      check (role in ('employee','approver','store','admin'));
+  end if;
+end $$;
+
 alter table profiles add column if not exists location    text;
 alter table profiles add column if not exists price_lists jsonb not null default '[]';
 alter table profiles add column if not exists from_store  text;
 alter table profiles add column if not exists to_store    text;
 
--- reset shopping assignments (old PL ids don't match the new price lists)
-update profiles set price_list = null, price_lists = '[]'::jsonb;
+-- Reset shopping assignments ONLY on the first v2 -> v3 migration (the old
+-- PL ids don't match the new price lists). On a re-run the v3 `masters`
+-- table already exists, so assignments the admin has made are left alone.
+do $$ begin
+  if not exists (select 1 from information_schema.tables where table_name = 'masters')
+     and exists (select 1 from information_schema.tables where table_name = 'profiles') then
+    update profiles set price_list = null, price_lists = '[]'::jsonb;
+  end if;
+end $$;
 
 -- 2 ── clear v2 transactional data (incompatible with the SRS2 model)
 drop table if exists orders cascade;

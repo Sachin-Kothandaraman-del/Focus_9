@@ -31,7 +31,7 @@ create table if not exists profiles (
   name        text not null,
   phone       text default '',
   emp_id      text default '',
-  role        text not null default 'employee' check (role in ('employee','approver','admin')),
+  role        text not null default 'employee' check (role in ('employee','approver','store','admin')),
   customer    text,
   dept        text,
   location    text,
