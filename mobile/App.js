@@ -71,7 +71,9 @@ function ApproverTabs() {
     </Tab.Navigator>
   );
 }
-function AdminTabs() {
+/* Store Module (roles "store" and "admin"): fulfilment + all orders.
+   User and master administration is web-only and admin-only. */
+function StoreTabs() {
   return (
     <Tab.Navigator>
       <Tab.Screen name="Fulfilment" component={FulfilScreen} options={tabOpts("🚚")} />
@@ -85,7 +87,9 @@ function Root() {
   const { user, pending } = useStore();
   if (!user) return <LoginScreen />;
   if (user.role === "employee" && pending) return <PendingScreen />;
-  const Tabs = user.role === "employee" ? EmployeeTabs : user.role === "approver" ? ApproverTabs : AdminTabs;
+  const Tabs = user.role === "employee" ? EmployeeTabs
+    : user.role === "approver" ? ApproverTabs
+    : StoreTabs;   // "store" and "admin" share the Store Module screens
   return (
     <Stack.Navigator>
       <Stack.Screen name="Main" component={Tabs} options={{ headerShown: false }} />

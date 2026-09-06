@@ -7,6 +7,11 @@ export const fmtDT = iso => {
 };
 export const fmtD = iso => (iso ? new Date(iso).toLocaleDateString("en-GB") : "—");
 
+/* Roles: employee · approver · store (Store Module) · admin (Store Module + admin).
+   Anything the Store Module can do is allowed for both `store` and `admin`. */
+export const isStores = user => !!user && ["admin", "store"].includes(user.role);
+export const ROLE_LABEL = { employee: "employee", approver: "approver", store: "stores", admin: "admin" };
+
 export const STATUS = {
   pending_approval:   { label: "Order Approval",       color: "#e8a213" },
   in_progress:        { label: "Order in Progress",    color: "#2f6fb2" },

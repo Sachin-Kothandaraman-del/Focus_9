@@ -140,12 +140,17 @@ export default function App() {
   }
 
   const cartCount = cart.order.length + cart.approval.length;
+  /* Store Module (role "store") gets fulfilment + inventory + all orders;
+     administration (users & masters) stays with the admin role. */
   const links = user.role === "employee"
     ? [["/shop", "🛒 Shop"], ["/carts", `🧺 Carts${cartCount ? ` (${cartCount})` : ""}`], ["/orders", "📦 My Orders"], ["/profile", "👤 My Limits"]]
     : user.role === "approver"
       ? [["/approvals", "✅ Approvals"], ["/orders", "🗂️ All Orders"], ["/profile", "👤 Profile"]]
-      : [["/fulfil", "🚚 Fulfilment"], ["/inventory", "🏬 Inventory"], ["/orders", "🗂️ All Orders"], ["/users", "👥 Users"], ["/masters", "📚 Masters"], ["/profile", "👤 Profile"]];
+      : user.role === "store"
+        ? [["/fulfil", "🚚 Fulfilment"], ["/inventory", "🏬 Inventory"], ["/orders", "🗂️ All Orders"], ["/profile", "👤 Profile"]]
+        : [["/fulfil", "🚚 Fulfilment"], ["/inventory", "🏬 Inventory"], ["/orders", "🗂️ All Orders"], ["/users", "👥 Users"], ["/masters", "📚 Masters"], ["/profile", "👤 Profile"]];
   const home = links[0][0];
+  const isAdmin = user.role === "admin";
 
   return (
     <Ctx.Provider value={ctx}>
@@ -181,8 +186,8 @@ export default function App() {
             <Route path="/approvals" element={<ApprovalsPage />} />
             <Route path="/fulfil" element={<FulfilPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/masters" element={<MastersPage />} />
-            <Route path="/users" element={<UsersPage />} />
+            <Route path="/masters" element={isAdmin ? <MastersPage /> : <Navigate to={home} replace />} />
+            <Route path="/users" element={isAdmin ? <UsersPage /> : <Navigate to={home} replace />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to={home} replace />} />
           </Routes>

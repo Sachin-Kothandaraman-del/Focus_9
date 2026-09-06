@@ -18,7 +18,17 @@ Groups & Categories).
    web/                                       middleware/
 ```
 
-**Features (SRS2, 25-08-26)**: e-mail/password **account creation**, **login**, **account deletion** (Play Store requirement) · self-signup with **admin activation** (customer, department, location, **multiple price lists** = multiple shopping tabs, From/To stores) · full masters incl. **Contracts, Divisions, Stores (Main + Reservation), Groups & Categories** with an admin Masters editor · price lists with **validity dates + delivery period** and size-variant lines sharing one allocation · shopping screen header with **Total Allocated / Total Used Amounts** · live **Main-store stock** on every item · server-side carts that **reserve stock on picking with a 10-minute window** (expiry releases stock) · within-limit → Order Cart, over-limit → Approval Cart (both debit Used Qty) · order placement **stock-transfers reserved qtys Main → Reservation store** (Issue + Receipt vouchers) · **delivery-date rules** (order date + delivery period / "DOD to be advised" / partial-stock line split) · **3-day approval window** with auto-cancel · **Re-save** (single + bulk) to fill DOD lines when stock arrives, with employee notifications · DOs issued **from the Reservation store** with employee acknowledgement (Receipt Voucher process removed) · **returns within 3 days of receipt** with store **Return Confirmation** crediting the price list + Main store and raising a **Credit Note** · balance cancellation by Stores · DO-consolidated invoicing · per-store **inventory screen** with manual adjustments & transfers · role-based access (employee / approver / admin).
+**Features (SRS2, 25-08-26)**: e-mail/password **account creation**, **login**, **account deletion** (Play Store requirement) · self-signup with **admin activation** (customer, department, location, **multiple price lists** = multiple shopping tabs, From/To stores) · full masters incl. **Contracts, Divisions, Stores (Main + Reservation), Groups & Categories** with an admin Masters editor · price lists with **validity dates + delivery period** and size-variant lines sharing one allocation · shopping screen header with **Total Allocated / Total Used Amounts** · live **Main-store stock** on every item · server-side carts that **reserve stock on picking with a 10-minute window** (expiry releases stock) · within-limit → Order Cart, over-limit → Approval Cart (both debit Used Qty) · order placement **stock-transfers reserved qtys Main → Reservation store** (Issue + Receipt vouchers) · **delivery-date rules** (order date + delivery period / "DOD to be advised" / partial-stock line split) · **3-day approval window** with auto-cancel · **Re-save** (single + bulk) to fill DOD lines when stock arrives, with employee notifications · DOs issued **from the Reservation store** with employee acknowledgement (Receipt Voucher process removed) · **returns within 3 days of receipt** with store **Return Confirmation** crediting the price list + Main store and raising a **Credit Note** · balance cancellation by Stores · DO-consolidated invoicing · per-store **inventory screen** with manual adjustments & transfers · **four roles** — see below.
+
+**Roles**
+| Role | Can do | Cannot do |
+|---|---|---|
+| `employee` | Shopping list, carts, own orders, DO acknowledgement, returns, My Limits | Anything in the Store Module or administration |
+| `approver` | EGA client approval (approve line-wise / reject), view all orders & masters | Fulfilment, inventory, administration |
+| `store` | **Store Module** — Fulfilment (Delivery Notes, Re-save single/bulk, Return Confirmation, DO consolidation & invoicing, cancel undelivered balance), Inventory (stock per store, adjustments, Issue/Receipt transfers), all orders, read-only masters | Create/edit users, create/edit/delete masters, delete accounts |
+| `admin` | Everything the `store` role can do **plus** administration: Users (roles, shopping profiles, activation) and Masters (all master data incl. the price-list editor) | — (admin accounts are protected from editing/deletion) |
+
+Promote a signed-up user to `store` or `admin` in **Users → Set up → Role**. Promoting to `admin` is permanent; the `store` role can be changed or deactivated at any time.
 
 **Two run modes** (auto-detected): leave Supabase keys empty → **local demo mode** (JSON DB, demo logins, password `prosafe1`); fill them in → **production mode** (Supabase Postgres + Supabase Auth).
 
@@ -47,7 +57,7 @@ Edit `.env`:
 npm start          # → http://localhost:4000  (log line shows storage/auth/erp modes)
 ```
 
-**Demo-mode logins** (password `prosafe1`): ahmed.m@dubal.ae · ravi.k@emal.ae · sara.k@twa.ae · m.hassan@ega.ae (approver) · stores@prosafe.ae (admin). In Supabase mode there are no demo users — everyone signs up.
+**Demo-mode logins** (password `prosafe1`): ahmed.m@dubal.ae · ravi.k@emal.ae · sara.k@twa.ae (employees) · m.hassan@ega.ae (approver) · storekeeper@prosafe.ae (**store**) · stores@prosafe.ae (admin). In Supabase mode there are no demo users — everyone signs up.
 
 ## 3. Run the website
 

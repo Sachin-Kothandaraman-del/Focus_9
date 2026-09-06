@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useApp } from "../App.jsx";
 import { api } from "../api";
-import { Chip, StatusChip, StockChip, Empty, Modal, fmt, fmtD, fmtDT } from "../ui.jsx";
+import { Chip, StatusChip, StockChip, Empty, Modal, fmt, fmtD, fmtDT, isStores } from "../ui.jsx";
 
 const BUCKETS = [
   ["all", "Orders"], ["progress", "Orders in Progress"], ["approval", "Order Approval"],
@@ -206,10 +206,10 @@ export default function OrdersPage() {
                   )}
                   {mine(sel) && ["complete", "partially_received"].includes(sel.status) &&
                     <button className="btn blue" onClick={() => setMode("return")}>↩ Return Order</button>}
-                  {user.role === "admin" && sel.resavable &&
+                  {isStores(user) && sel.resavable &&
                     <button className="btn navy" disabled={busy} onClick={resave}
                       title="Check Main-store stock for DOD lines, reserve it and update delivery dates">💾 Re-save Order</button>}
-                  {user.role === "admin" && ["in_progress", "pending_approval", "partially_delivered", "do_created", "partially_received"].includes(sel.status) &&
+                  {isStores(user) && ["in_progress", "pending_approval", "partially_delivered", "do_created", "partially_received"].includes(sel.status) &&
                     <button className="btn red" disabled={busy}
                       onClick={() => window.confirm(`Cancel the undelivered balance of ${sel.ref}? Reserved qtys go back to the Main store and the price list is credited.`)
                         && act(sel.ref, "cancel", null, "Cancelled.")}>
@@ -233,7 +233,7 @@ export default function OrdersPage() {
                     </div>
                     {mine(sel) && r.status === "pending" &&
                       <button className="btn sm ghost" disabled={busy} onClick={() => withdrawReturn(r.ref)}>Withdraw</button>}
-                    {user.role === "admin" && r.status === "pending" &&
+                    {isStores(user) && r.status === "pending" &&
                       <button className="btn sm green" disabled={busy} onClick={() => confirmReturn(r.ref)}>Return Confirmation</button>}
                   </div>
                 ))}

@@ -45,6 +45,16 @@ const APPROVAL_WINDOW_DAYS = 3;  // SRS2: max 3 days for EGA approval
 const RETURN_WINDOW_DAYS = 3;    // SRS2: returns allowed within 3 days of receipt
 const requireAuth = authsvc.requireAuth;
 
+/* Roles (SRS2 modules):
+     employee — Shopping, Carts, My Orders, My Limits
+     approver — EGA client approval
+     store    — Store Module: fulfilment, inventory, order handling
+     admin    — Store Module + Administration (users & masters)
+   Everything the Store Module can do is expressed as STORES_ROLES so the two
+   are always kept in step; administration stays admin-only. */
+const STORES_ROLES = ["admin", "store"];
+const isStores = u => !!u && STORES_ROLES.includes(u.role);
+
 /* Serverless-friendly init gate + periodic sweeps (cart expiry / approval expiry). */
 let _ready = null;
 app.use((req, res, next) => {
@@ -648,8 +658,8 @@ app.post("/api/orders/:ref/cancel", requireAuth(), wrap(async (req, res) => {
   const o = await store.getOrder(req.params.ref);
   if (!o) return res.status(404).json({ error: "Not found" });
   normalizeOrder(o);
-  const isAdmin = req.user.role === "admin";
-  if (!isAdmin) {
+  const fromStores = isStores(req.user);
+  if (!fromStores) {
     if (o.emp !== req.user.id) return res.status(403).json({ error: "Not your order" });
     if (o.status !== "in_progress") return res.status(422).json({ error: "Only in-progress orders can be cancelled" });
     if (o.lines.some(l => l.delivered > 0)) return res.status(422).json({ error: "Delivery has started — ask PROSAFE Stores to cancel the balance" });
@@ -674,11 +684,11 @@ app.post("/api/orders/:ref/cancel", requireAuth(), wrap(async (req, res) => {
     o.history.push({ at: nowIso(), ev: `Undelivered balance cancelled by ${req.user.name} — reserved qtys returned to Main store, price list credited` });
   } else {
     o.status = "cancelled";
-    o.history.push({ at: nowIso(), ev: `Cancelled by ${req.user.name}${isAdmin ? " (Stores)" : ` within the ${CANCEL_WINDOW_MIN}-minute window`}` });
+    o.history.push({ at: nowIso(), ev: `Cancelled by ${req.user.name}${fromStores ? " (Stores)" : ` within the ${CANCEL_WINDOW_MIN}-minute window`}` });
     if (o.so) await safeCall("cancelSalesOrder", o.so);
   }
   await store.saveOrder(o);
-  if (isAdmin && o.emp !== req.user.id)
+  if (fromStores && o.emp !== req.user.id)
     await store.addNotification(o.emp, `Order ${o.ref}: ${anyDelivered ? "the undelivered balance was cancelled" : "the order was cancelled"} by PROSAFE Stores.`);
   res.json(orderDTO(o));
 }));
@@ -770,7 +780,7 @@ async function resaveOrder(o, byName) {
   return updated;
 }
 
-app.post("/api/orders/:ref/resave", requireAuth("admin"), wrap(async (req, res) => {
+app.post("/api/orders/:ref/resave", requireAuth("admin", "store"), wrap(async (req, res) => {
   const o = await store.getOrder(req.params.ref);
   if (!o) return res.status(404).json({ error: "Order not found" });
   if (!["in_progress", "partially_delivered", "do_created", "partially_received"].includes(o.status))
@@ -779,7 +789,7 @@ app.post("/api/orders/:ref/resave", requireAuth("admin"), wrap(async (req, res) 
   res.json({ order: orderDTO(o), updated });
 }));
 
-app.post("/api/orders/resave-all", requireAuth("admin"), wrap(async (req, res) => {
+app.post("/api/orders/resave-all", requireAuth("admin", "store"), wrap(async (req, res) => {
   const orders = await store.listOrders();
   const results = [];
   for (const o of orders) {
@@ -791,7 +801,7 @@ app.post("/api/orders/resave-all", requireAuth("admin"), wrap(async (req, res) =
 }));
 
 /* Delivery Note — created from the RESERVATION store; only reserved qtys can ship. */
-app.post("/api/orders/:ref/delivery-note", requireAuth("admin"), wrap(async (req, res) => {
+app.post("/api/orders/:ref/delivery-note", requireAuth("admin", "store"), wrap(async (req, res) => {
   const o = await store.getOrder(req.params.ref);
   if (!o) return res.status(404).json({ error: "Order not found" });
   normalizeOrder(o);
@@ -948,7 +958,7 @@ app.delete("/api/orders/:ref/returns/:rt", requireAuth("employee"), wrap(async (
 
 /* Stores acknowledges physical receipt of the returned items ("Return
    Confirmation") → credit Used Qty, credit the Main store, raise a Credit Note. */
-app.post("/api/orders/:ref/returns/:rt/confirm", requireAuth("admin"), wrap(async (req, res) => {
+app.post("/api/orders/:ref/returns/:rt/confirm", requireAuth("admin", "store"), wrap(async (req, res) => {
   const o = await store.getOrder(req.params.ref);
   if (!o) return res.status(404).json({ error: "Order not found" });
   normalizeOrder(o);
@@ -984,7 +994,7 @@ app.post("/api/orders/:ref/returns/:rt/confirm", requireAuth("admin"), wrap(asyn
 }));
 
 /* ══════════════════ INVOICING (admin) ══════════════════ */
-app.post("/api/invoices/consolidate", requireAuth("admin"), wrap(async (req, res) => {
+app.post("/api/invoices/consolidate", requireAuth("admin", "store"), wrap(async (req, res) => {
   const docs = await store.listErpDocs();
   const pend = docs.dn.filter(d => !d.invoiced);
   if (!pend.length) return res.status(422).json({ error: "No delivery notes pending invoicing" });
@@ -1006,12 +1016,12 @@ app.post("/api/invoices/consolidate", requireAuth("admin"), wrap(async (req, res
 }));
 
 /* ══════════════════ INVENTORY (Store module) ══════════════════ */
-app.get("/api/admin/inventory", requireAuth("admin", "approver"), wrap(async (req, res) => {
+app.get("/api/admin/inventory", requireAuth("admin", "approver", "store"), wrap(async (req, res) => {
   const m = await masters();
   res.json({ stores: m.stores, items: m.items, inventory: await store.getInventory() });
 }));
 
-app.post("/api/admin/inventory/adjust", requireAuth("admin"), wrap(async (req, res) => {
+app.post("/api/admin/inventory/adjust", requireAuth("admin", "store"), wrap(async (req, res) => {
   const { store: storeCode, code, qty, reason } = req.body || {};
   const dq = Number(qty);
   if (!storeCode || !code || !Number.isFinite(dq) || dq === 0)
@@ -1021,7 +1031,7 @@ app.post("/api/admin/inventory/adjust", requireAuth("admin"), wrap(async (req, r
   res.json({ ok: true, store: storeCode, code, qty: next });
 }));
 
-app.post("/api/admin/inventory/transfer", requireAuth("admin"), wrap(async (req, res) => {
+app.post("/api/admin/inventory/transfer", requireAuth("admin", "store"), wrap(async (req, res) => {
   const { from, to, lines } = req.body || {};
   if (!from || !to || from === to) return res.status(400).json({ error: "Different from/to stores are required" });
   if (!Array.isArray(lines) || !lines.length) return res.status(400).json({ error: "lines required" });
@@ -1055,8 +1065,8 @@ app.patch("/api/admin/users/:id", requireAuth("admin"), wrap(async (req, res) =>
   const allowed = ["role", "customer", "dept", "location", "priceList", "priceLists", "fromStore", "toStore", "active", "empId", "name", "phone"];
   const patch = {};
   for (const k of allowed) if (k in (req.body || {})) patch[k] = req.body[k];
-  if (patch.role && !["employee", "approver", "admin"].includes(patch.role))
-    return res.status(400).json({ error: "role must be employee|approver|admin" });
+  if (patch.role && !["employee", "approver", "store", "admin"].includes(patch.role))
+    return res.status(400).json({ error: "role must be employee|approver|store|admin" });
   if ("priceList" in patch && !("priceLists" in patch))
     patch.priceLists = patch.priceList ? [patch.priceList] : [];
   if ("priceLists" in patch) {
@@ -1068,7 +1078,8 @@ app.patch("/api/admin/users/:id", requireAuth("admin"), wrap(async (req, res) =>
   }
   // Promotion is permanent: administrators are activated immediately and
   // subsequent requests are rejected by the protection above.
-  if (patch.role === "admin") patch.active = true;
+  // Store and admin accounts are usable the moment they are promoted.
+  if (patch.role === "admin" || patch.role === "store") patch.active = true;
   const p = await store.updateProfile(req.params.id, patch);
   res.json(pub(p));
 }));
@@ -1083,7 +1094,7 @@ app.delete("/api/admin/users/:id", requireAuth("admin"), wrap(async (req, res) =
   res.json({ ok: true });
 }));
 
-app.get("/api/masters", requireAuth("admin", "approver"), wrap(async (req, res) => {
+app.get("/api/masters", requireAuth("admin", "approver", "store"), wrap(async (req, res) => {
   res.json(await masters());
 }));
 
@@ -1123,7 +1134,7 @@ app.delete("/api/admin/masters/:kind/:id", requireAuth("admin"), wrap(async (req
   res.json({ ok: true });
 }));
 
-app.get("/api/erp/documents", requireAuth("admin", "approver"), wrap(async (req, res) => {
+app.get("/api/erp/documents", requireAuth("admin", "approver", "store"), wrap(async (req, res) => {
   res.json(await store.listErpDocs());
 }));
 

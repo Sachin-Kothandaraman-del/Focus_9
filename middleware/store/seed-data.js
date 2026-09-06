@@ -193,12 +193,14 @@ module.exports = {
     ]}
   ],
 
-  /* Local-demo-mode logins only (password for all: prosafe1). In Supabase mode, users sign up themselves. */
+  /* Local-demo-mode logins only (password for all: prosafe1). In Supabase mode, users sign up themselves.
+     Roles: employee · approver · store (Store Module) · admin (Store Module + administration). */
   demoUsers: [
     { id: "local-e1001", empId: "ID001", name: "Ahmed Al Mansoori", email: "ahmed.m@dubal.ae",  phone: "+971 50 xxxxxx1", customer: "C01", dept: "PLDA", location: "DA001", priceLists: ["PL1", "PL2"], fromStore: "EGAMS", toStore: "EGADR", role: "employee", active: true },
     { id: "local-e1002", empId: "ID007", name: "Ravi Kumar",        email: "ravi.k@emal.ae",    phone: "+971 50 xxxxxx7", customer: "C02", dept: "PLEA", location: "EA001", priceLists: ["PL3"],        fromStore: "EGAMS", toStore: "EGAER", role: "employee", active: true },
     { id: "local-e1003", empId: "ID003", name: "Sara Khan",         email: "sara.k@twa.ae",     phone: "+971 50 xxxxxx3", customer: "C01", dept: "EGDA", location: "DA002", priceLists: ["PL2"],        fromStore: "EGAMS", toStore: "EGADR", role: "employee", active: true },
     { id: "local-a2001", empId: "A2001", name: "Mohammed Hassan",   email: "m.hassan@ega.ae",   phone: "+971 50 9876543", customer: "C01", dept: "EGDA", location: null,    priceLists: [],             fromStore: null,    toStore: null,    role: "approver", active: true },
+    { id: "local-w4001", empId: "W4001", name: "EGA Store Keeper",  email: "storekeeper@prosafe.ae", phone: "+971 4 3334466", customer: null, dept: null, location: null, priceLists: [], fromStore: "EGAMS", toStore: "EGADR", role: "store", active: true },
     { id: "local-s3001", empId: "S3001", name: "PROSAFE Stores",    email: "stores@prosafe.ae", phone: "+971 4 3334455",  customer: null,  dept: null,   location: null,    priceLists: [],             fromStore: null,    toStore: null,    role: "admin",    active: true }
   ],
 

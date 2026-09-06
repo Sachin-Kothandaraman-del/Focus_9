@@ -28,7 +28,8 @@ export default function OrderDetailScreen({ route, navigation }) {
   if (!o) return <Loading />;
 
   const mine = user.role === "employee" && o.emp === user.id;
-  const isAdmin = user.role === "admin";
+  /* Store Module actions are available to both "store" and "admin". */
+  const isAdmin = ["admin", "store"].includes(user.role);
   const canCancel = mine && o.status === "in_progress";
   const canReturn = mine && ["complete", "partially_received"].includes(o.status);
   const returnable = l => Math.max(0, (l.received || 0) - (l.returned || 0));

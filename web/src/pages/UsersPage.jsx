@@ -34,7 +34,9 @@ export default function UsersPage() {
   }
   async function saveEdit() {
     const { id, role, customer, dept, location, priceLists, fromStore, toStore, empId, name, phone } = edit;
-    if (role === "admin" && !window.confirm(`Make ${edit.email} an Administrator? This permanently protects the account.`)) return;
+    if (role === "admin" && !window.confirm(
+      `Make ${edit.email} an Administrator? Admins get the Store Module plus user and master administration, and the account becomes permanently protected.\n\nFor fulfilment and inventory only, choose the "store" role instead.`
+    )) return;
     const ok = await patch(id, { role, customer, dept, location, priceLists, fromStore, toStore, empId, name, phone });
     if (ok) setEdit(null);
   }
@@ -98,9 +100,10 @@ export default function UsersPage() {
               <div><label className="f">Mobile Phone</label><input value={edit.phone || ""} onChange={e => setEdit({ ...edit, phone: e.target.value })} /></div>
               <div><label className="f">Role</label>
                 <select value={edit.role} onChange={e => setEdit({ ...edit, role: e.target.value })}>
-                  <option value="employee">employee</option>
-                  <option value="approver">approver</option>
-                  <option value="admin">admin</option>
+                  <option value="employee">employee — shops against a price list</option>
+                  <option value="approver">approver — EGA client approval</option>
+                  <option value="store">store — Store Module (fulfilment &amp; inventory)</option>
+                  <option value="admin">admin — Store Module + user/master administration</option>
                 </select></div>
             </div>
             <div className="row">
@@ -132,6 +135,15 @@ export default function UsersPage() {
                   {resStores.map(s => <option key={s.code} value={s.code}>{s.code} — {s.name}</option>)}
                 </select></div>
             </div>
+            {edit.role !== "employee" && (
+              <div className="sm mut" style={{ marginTop: 6 }}>
+                {edit.role === "store"
+                  ? "Store users work the Fulfilment and Inventory screens and all orders — no shopping profile is needed."
+                  : edit.role === "approver"
+                    ? "Approvers review orders sent for EGA approval — no shopping profile is needed."
+                    : "Admins get the Store Module plus user and master administration."}
+              </div>
+            )}
             <label className="f">Approved Price Lists (each one becomes a shopping tab)</label>
             <div className="row">
               {m.priceLists.map(p => (
