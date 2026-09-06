@@ -3,8 +3,14 @@
 --
 -- Paste this ENTIRE file into Supabase → SQL Editor and press Run.
 -- It performs, in order:  v2→v3 migration → schema → seed data.
--- Safe to re-run (idempotent): keeps user accounts, keeps the price-list
--- assignments the admin has made, and does not overwrite live inventory.
+--
+-- SAFE TO RE-RUN on a live database. A repeat run refreshes the master
+-- data (items, price lists, stores…) and leaves everything else alone:
+--   · user accounts and their price-list / store assignments — kept
+--   · orders, allocations (Used Qty), ERP documents, sequences — kept
+--   · live inventory quantities — kept
+-- The one-time v2 cleanup only happens while the database is still on the
+-- old model (before the v3 `masters` table exists).
 --
 -- Product photos are NOT in this file — the middleware serves them from
 -- middleware/store/item-images.js, so nothing here is oversized.
@@ -12,7 +18,7 @@
 
 
 
--- ╔══════════════ PART 1 · MIGRATION v2 → v3 ══════════════╗
+-- ╔══════════════ PART 1 · MIGRATION v2 → v3 (first run only) ══════════════╗
 
 -- ═══════════════════════════════════════════════════════════════════
 -- PROSAFE × EGA — Supabase migration  v2 → v3 (Mobile App SRS2, 25-08-26)
@@ -68,22 +74,36 @@ do $$ begin
   end if;
 end $$;
 
--- 2 ── clear v2 transactional data (incompatible with the SRS2 model)
-drop table if exists orders cascade;
-drop table if exists erp_docs cascade;
-drop table if exists erp_log cascade;
-drop table if exists allocations cascade;
-drop table if exists seqs cascade;
+-- 2 & 3 ── FIRST-TIME MIGRATION ONLY.
+-- Everything below runs only while this is still a v2 database (the v3
+-- `masters` table does not exist yet). Once the database is on v3, re-running
+-- this file is a no-op here, so live orders, allocations, ERP documents,
+-- sequences and inventory are never destroyed by a repeat run.
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_name = 'masters') then
+    raise notice 'Database is already on the v3 model - skipping the one-time cleanup (orders, allocations and ERP documents are kept).';
+    return;
+  end if;
 
--- 3 ── drop v2 master tables (replaced by the `masters` table in v3);
---      CASCADE removes any remaining constraints that point at them
-drop table if exists price_list_lines cascade;
-drop table if exists price_lists cascade;
-drop table if exists items cascade;
-drop table if exists uoms cascade;
-drop table if exists locations cascade;
-drop table if exists departments cascade;
-drop table if exists customers cascade;
+  -- v2 transactional data is incompatible with the SRS2 model (stock
+  -- reservation, line-key allocations, DOD lines), so it is cleared once.
+  drop table if exists orders cascade;
+  drop table if exists erp_docs cascade;
+  drop table if exists erp_log cascade;
+  drop table if exists allocations cascade;
+  drop table if exists seqs cascade;
+
+  -- v2 master tables are replaced by the `masters` table in v3;
+  -- CASCADE removes any remaining constraints that point at them.
+  drop table if exists price_list_lines cascade;
+  drop table if exists price_lists cascade;
+  drop table if exists items cascade;
+  drop table if exists uoms cascade;
+  drop table if exists locations cascade;
+  drop table if exists departments cascade;
+  drop table if exists customers cascade;
+end $$;
 
 -- Done. Now run schema.sql, then seed.sql.
 
@@ -262,7 +282,7 @@ alter table erp_log       enable row level security;
 alter table seqs          enable row level security;
 
 
--- ╔══════════════ PART 3 · SEED DATA ══════════════╗
+-- ╔══════════════ PART 3 · SEED / REFRESH MASTER DATA ══════════════╗
 
 -- ═══════════════════════════════════════════════════════════════════
 -- PROSAFE × EGA — Supabase seed  v3 (SRS2 25-08-26, from the Data List Excel workbooks)

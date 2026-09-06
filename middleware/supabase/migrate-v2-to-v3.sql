@@ -52,21 +52,35 @@ do $$ begin
   end if;
 end $$;
 
--- 2 ── clear v2 transactional data (incompatible with the SRS2 model)
-drop table if exists orders cascade;
-drop table if exists erp_docs cascade;
-drop table if exists erp_log cascade;
-drop table if exists allocations cascade;
-drop table if exists seqs cascade;
+-- 2 & 3 ── FIRST-TIME MIGRATION ONLY.
+-- Everything below runs only while this is still a v2 database (the v3
+-- `masters` table does not exist yet). Once the database is on v3, re-running
+-- this file is a no-op here, so live orders, allocations, ERP documents,
+-- sequences and inventory are never destroyed by a repeat run.
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_name = 'masters') then
+    raise notice 'Database is already on the v3 model - skipping the one-time cleanup (orders, allocations and ERP documents are kept).';
+    return;
+  end if;
 
--- 3 ── drop v2 master tables (replaced by the `masters` table in v3);
---      CASCADE removes any remaining constraints that point at them
-drop table if exists price_list_lines cascade;
-drop table if exists price_lists cascade;
-drop table if exists items cascade;
-drop table if exists uoms cascade;
-drop table if exists locations cascade;
-drop table if exists departments cascade;
-drop table if exists customers cascade;
+  -- v2 transactional data is incompatible with the SRS2 model (stock
+  -- reservation, line-key allocations, DOD lines), so it is cleared once.
+  drop table if exists orders cascade;
+  drop table if exists erp_docs cascade;
+  drop table if exists erp_log cascade;
+  drop table if exists allocations cascade;
+  drop table if exists seqs cascade;
+
+  -- v2 master tables are replaced by the `masters` table in v3;
+  -- CASCADE removes any remaining constraints that point at them.
+  drop table if exists price_list_lines cascade;
+  drop table if exists price_lists cascade;
+  drop table if exists items cascade;
+  drop table if exists uoms cascade;
+  drop table if exists locations cascade;
+  drop table if exists departments cascade;
+  drop table if exists customers cascade;
+end $$;
 
 -- Done. Now run schema.sql, then seed.sql.
