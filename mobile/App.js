@@ -71,13 +71,38 @@ function ApproverTabs() {
     </Tab.Navigator>
   );
 }
-/* Store Module (roles "store" and "admin"): fulfilment + all orders.
-   User and master administration is web-only and admin-only. */
+/* Store Module (role "store"): fulfilment + all orders. */
 function StoreTabs() {
   return (
     <Tab.Navigator>
       <Tab.Screen name="Fulfilment" component={FulfilScreen} options={tabOpts("🚚")} />
       <Tab.Screen name="All Orders" component={OrdersScreen} options={tabOpts("🗂️")} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={tabOpts("👤")} />
+    </Tab.Navigator>
+  );
+}
+
+/* Admin Module is web-only — the phone app has no Users/Masters screens. */
+function AdminNoticeScreen() {
+  return (
+    <View style={{ flex: 1, justifyContent: "center", padding: 30 }}>
+      <Text style={{ fontSize: 40, textAlign: "center", marginBottom: 14 }}>🛠️</Text>
+      <Text style={{ fontSize: 18, fontWeight: "800", color: C.navy, textAlign: "center" }}>
+        Administration is on the web portal
+      </Text>
+      <Text style={{ color: C.mut, textAlign: "center", marginTop: 10, lineHeight: 20 }}>
+        User log-in control, shopping profiles and the master data screens are
+        available when you sign in to the PROSAFE website with this account.
+        {"\n\n"}Fulfilment, Inventory and All Orders belong to the Store Module —
+        sign in with a store account to use them.
+      </Text>
+    </View>
+  );
+}
+function AdminTabs() {
+  return (
+    <Tab.Navigator>
+      <Tab.Screen name="Administration" component={AdminNoticeScreen} options={tabOpts("🛠️")} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={tabOpts("👤")} />
     </Tab.Navigator>
   );
@@ -89,7 +114,8 @@ function Root() {
   if (user.role === "employee" && pending) return <PendingScreen />;
   const Tabs = user.role === "employee" ? EmployeeTabs
     : user.role === "approver" ? ApproverTabs
-    : StoreTabs;   // "store" and "admin" share the Store Module screens
+    : user.role === "store" ? StoreTabs
+    : AdminTabs;
   return (
     <Stack.Navigator>
       <Stack.Screen name="Main" component={Tabs} options={{ headerShown: false }} />

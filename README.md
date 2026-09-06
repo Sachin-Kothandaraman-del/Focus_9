@@ -25,10 +25,13 @@ Groups & Categories).
 |---|---|---|
 | `employee` | Shopping list, carts, own orders, DO acknowledgement, returns, My Limits | Anything in the Store Module or administration |
 | `approver` | EGA client approval (approve line-wise / reject), view all orders & masters | Fulfilment, inventory, administration |
-| `store` | **Store Module** — Fulfilment (Delivery Notes, Re-save single/bulk, Return Confirmation, DO consolidation & invoicing, cancel undelivered balance), Inventory (stock per store, adjustments, Issue/Receipt transfers), all orders, read-only masters | Create/edit users, create/edit/delete masters, delete accounts |
-| `admin` | Everything the `store` role can do **plus** administration: Users (roles, shopping profiles, activation) and Masters (all master data incl. the price-list editor) | — (admin accounts are protected from editing/deletion) |
+| `store` | **Store Module** — Fulfilment (Delivery Notes, Re-save single/bulk, Return Confirmation, DO consolidation & invoicing, cancel undelivered balance), Inventory (stock per store, adjustments, Issue/Receipt transfers), All Orders | Users, Masters, deleting accounts |
+| `admin` | **Admin Module** — Users (roles, shopping profiles, activation) and Masters (all master data incl. the price-list editor) | The Store Module: no Fulfilment, Inventory or All Orders |
 
-Promote a signed-up user to `store` or `admin` in **Users → Set up → Role**. Promoting to `admin` is permanent; the `store` role can be changed or deactivated at any time.
+The modules are **strictly separate**, as in SRS2: an admin does not get the Store
+Module screens, and a store user does not get Users or Masters. Anyone who needs
+both is given two accounts. Assign roles in **Users → Set up → Role**; promoting to
+`admin` is permanent, while `store` can be changed or deactivated at any time.
 
 **Two run modes** (auto-detected): leave Supabase keys empty → **local demo mode** (JSON DB, demo logins, password `prosafe1`); fill them in → **production mode** (Supabase Postgres + Supabase Auth).
 
@@ -85,7 +88,7 @@ Set the middleware URL in `mobile/src/config.js` (LAN IP for a physical phone, H
 3. Admin (web → **Users**): assign role/company/department/price list → **Activate**.
 4. Employee shops → orders within limits create the ERP SO instantly; over-limit/restricted items go to the **Approval** bucket.
 5. Approver approves (SO created, approved-qty list raised) or rejects.
-6. Admin creates Delivery Notes → employee acknowledges receipt → returns credit the allocation → admin consolidates DOs → invoice to EGA.
+6. **Stores** (a user with the `store` role) creates Delivery Notes → employee acknowledges receipt → returns are confirmed by Stores and credit the allocation → Stores consolidates DOs → invoice to EGA.
 7. Anyone can delete their own account from **Profile** (admin can also delete users).
 
 ## 6. ERPNext integration (live ERP)

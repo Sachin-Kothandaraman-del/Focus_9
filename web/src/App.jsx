@@ -140,17 +140,19 @@ export default function App() {
   }
 
   const cartCount = cart.order.length + cart.approval.length;
-  /* Store Module (role "store") gets fulfilment + inventory + all orders;
-     administration (users & masters) stays with the admin role. */
+  /* SRS2 modules are separate: the Store Module (role "store") holds
+     Fulfilment, Inventory and All Orders; the Admin Module (role "admin")
+     holds Users and Masters only. */
   const links = user.role === "employee"
     ? [["/shop", "🛒 Shop"], ["/carts", `🧺 Carts${cartCount ? ` (${cartCount})` : ""}`], ["/orders", "📦 My Orders"], ["/profile", "👤 My Limits"]]
     : user.role === "approver"
       ? [["/approvals", "✅ Approvals"], ["/orders", "🗂️ All Orders"], ["/profile", "👤 Profile"]]
       : user.role === "store"
         ? [["/fulfil", "🚚 Fulfilment"], ["/inventory", "🏬 Inventory"], ["/orders", "🗂️ All Orders"], ["/profile", "👤 Profile"]]
-        : [["/fulfil", "🚚 Fulfilment"], ["/inventory", "🏬 Inventory"], ["/orders", "🗂️ All Orders"], ["/users", "👥 Users"], ["/masters", "📚 Masters"], ["/profile", "👤 Profile"]];
+        : [["/users", "👥 Users"], ["/masters", "📚 Masters"], ["/profile", "👤 Profile"]];
   const home = links[0][0];
   const isAdmin = user.role === "admin";
+  const isStoreUser = user.role === "store";
 
   return (
     <Ctx.Provider value={ctx}>
@@ -182,10 +184,10 @@ export default function App() {
           <Routes>
             <Route path="/shop" element={<ShopPage />} />
             <Route path="/carts" element={<CartsPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/orders" element={isAdmin ? <Navigate to={home} replace /> : <OrdersPage />} />
             <Route path="/approvals" element={<ApprovalsPage />} />
-            <Route path="/fulfil" element={<FulfilPage />} />
-            <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/fulfil" element={isAdmin ? <Navigate to={home} replace /> : <FulfilPage />} />
+            <Route path="/inventory" element={isAdmin ? <Navigate to={home} replace /> : <InventoryPage />} />
             <Route path="/masters" element={isAdmin ? <MastersPage /> : <Navigate to={home} replace />} />
             <Route path="/users" element={isAdmin ? <UsersPage /> : <Navigate to={home} replace />} />
             <Route path="/profile" element={<ProfilePage />} />

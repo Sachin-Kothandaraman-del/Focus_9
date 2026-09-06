@@ -7,9 +7,12 @@ export const fmtDT = iso => {
 };
 export const fmtD = iso => (iso ? new Date(iso).toLocaleDateString("en-GB") : "—");
 
-/* Roles: employee · approver · store (Store Module) · admin (Store Module + admin).
-   Anything the Store Module can do is allowed for both `store` and `admin`. */
-export const isStores = user => !!user && ["admin", "store"].includes(user.role);
+/* Roles mirror the SRS2 modules and are kept separate:
+     employee — Employee Module      approver — EGA approval
+     store    — Store Module (Fulfilment, Inventory, All Orders)
+     admin    — Admin Module (Users, Masters) — no Store Module screens. */
+export const isStores = user => !!user && user.role === "store";
+export const isAdmin  = user => !!user && user.role === "admin";
 export const ROLE_LABEL = { employee: "employee", approver: "approver", store: "stores", admin: "admin" };
 
 export const STATUS = {

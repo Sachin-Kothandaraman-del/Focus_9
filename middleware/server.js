@@ -45,14 +45,15 @@ const APPROVAL_WINDOW_DAYS = 3;  // SRS2: max 3 days for EGA approval
 const RETURN_WINDOW_DAYS = 3;    // SRS2: returns allowed within 3 days of receipt
 const requireAuth = authsvc.requireAuth;
 
-/* Roles (SRS2 modules):
-     employee — Shopping, Carts, My Orders, My Limits
+/* Roles = the SRS2 modules, kept strictly separate:
+     employee — Employee Module:  Shopping, Carts, My Orders, My Limits
      approver — EGA client approval
-     store    — Store Module: fulfilment, inventory, order handling
-     admin    — Store Module + Administration (users & masters)
-   Everything the Store Module can do is expressed as STORES_ROLES so the two
-   are always kept in step; administration stays admin-only. */
-const STORES_ROLES = ["admin", "store"];
+     store    — Store Module:     Fulfilment, Inventory, All Orders
+     admin    — Admin Module:     Users (log-in control & shopping profiles)
+                                  and Masters. NOT the Store Module — an admin
+                                  who also needs to fulfil orders is given a
+                                  separate account with the store role. */
+const STORES_ROLES = ["store"];
 const isStores = u => !!u && STORES_ROLES.includes(u.role);
 
 /* Serverless-friendly init gate + periodic sweeps (cart expiry / approval expiry). */
@@ -780,7 +781,7 @@ async function resaveOrder(o, byName) {
   return updated;
 }
 
-app.post("/api/orders/:ref/resave", requireAuth("admin", "store"), wrap(async (req, res) => {
+app.post("/api/orders/:ref/resave", requireAuth("store"), wrap(async (req, res) => {
   const o = await store.getOrder(req.params.ref);
   if (!o) return res.status(404).json({ error: "Order not found" });
   if (!["in_progress", "partially_delivered", "do_created", "partially_received"].includes(o.status))
@@ -789,7 +790,7 @@ app.post("/api/orders/:ref/resave", requireAuth("admin", "store"), wrap(async (r
   res.json({ order: orderDTO(o), updated });
 }));
 
-app.post("/api/orders/resave-all", requireAuth("admin", "store"), wrap(async (req, res) => {
+app.post("/api/orders/resave-all", requireAuth("store"), wrap(async (req, res) => {
   const orders = await store.listOrders();
   const results = [];
   for (const o of orders) {
@@ -801,7 +802,7 @@ app.post("/api/orders/resave-all", requireAuth("admin", "store"), wrap(async (re
 }));
 
 /* Delivery Note — created from the RESERVATION store; only reserved qtys can ship. */
-app.post("/api/orders/:ref/delivery-note", requireAuth("admin", "store"), wrap(async (req, res) => {
+app.post("/api/orders/:ref/delivery-note", requireAuth("store"), wrap(async (req, res) => {
   const o = await store.getOrder(req.params.ref);
   if (!o) return res.status(404).json({ error: "Order not found" });
   normalizeOrder(o);
@@ -958,7 +959,7 @@ app.delete("/api/orders/:ref/returns/:rt", requireAuth("employee"), wrap(async (
 
 /* Stores acknowledges physical receipt of the returned items ("Return
    Confirmation") → credit Used Qty, credit the Main store, raise a Credit Note. */
-app.post("/api/orders/:ref/returns/:rt/confirm", requireAuth("admin", "store"), wrap(async (req, res) => {
+app.post("/api/orders/:ref/returns/:rt/confirm", requireAuth("store"), wrap(async (req, res) => {
   const o = await store.getOrder(req.params.ref);
   if (!o) return res.status(404).json({ error: "Order not found" });
   normalizeOrder(o);
@@ -994,7 +995,7 @@ app.post("/api/orders/:ref/returns/:rt/confirm", requireAuth("admin", "store"), 
 }));
 
 /* ══════════════════ INVOICING (admin) ══════════════════ */
-app.post("/api/invoices/consolidate", requireAuth("admin", "store"), wrap(async (req, res) => {
+app.post("/api/invoices/consolidate", requireAuth("store"), wrap(async (req, res) => {
   const docs = await store.listErpDocs();
   const pend = docs.dn.filter(d => !d.invoiced);
   if (!pend.length) return res.status(422).json({ error: "No delivery notes pending invoicing" });
@@ -1016,12 +1017,12 @@ app.post("/api/invoices/consolidate", requireAuth("admin", "store"), wrap(async 
 }));
 
 /* ══════════════════ INVENTORY (Store module) ══════════════════ */
-app.get("/api/admin/inventory", requireAuth("admin", "approver", "store"), wrap(async (req, res) => {
+app.get("/api/admin/inventory", requireAuth("store"), wrap(async (req, res) => {
   const m = await masters();
   res.json({ stores: m.stores, items: m.items, inventory: await store.getInventory() });
 }));
 
-app.post("/api/admin/inventory/adjust", requireAuth("admin", "store"), wrap(async (req, res) => {
+app.post("/api/admin/inventory/adjust", requireAuth("store"), wrap(async (req, res) => {
   const { store: storeCode, code, qty, reason } = req.body || {};
   const dq = Number(qty);
   if (!storeCode || !code || !Number.isFinite(dq) || dq === 0)
@@ -1031,7 +1032,7 @@ app.post("/api/admin/inventory/adjust", requireAuth("admin", "store"), wrap(asyn
   res.json({ ok: true, store: storeCode, code, qty: next });
 }));
 
-app.post("/api/admin/inventory/transfer", requireAuth("admin", "store"), wrap(async (req, res) => {
+app.post("/api/admin/inventory/transfer", requireAuth("store"), wrap(async (req, res) => {
   const { from, to, lines } = req.body || {};
   if (!from || !to || from === to) return res.status(400).json({ error: "Different from/to stores are required" });
   if (!Array.isArray(lines) || !lines.length) return res.status(400).json({ error: "lines required" });
@@ -1134,7 +1135,7 @@ app.delete("/api/admin/masters/:kind/:id", requireAuth("admin"), wrap(async (req
   res.json({ ok: true });
 }));
 
-app.get("/api/erp/documents", requireAuth("admin", "approver", "store"), wrap(async (req, res) => {
+app.get("/api/erp/documents", requireAuth("store"), wrap(async (req, res) => {
   res.json(await store.listErpDocs());
 }));
 
