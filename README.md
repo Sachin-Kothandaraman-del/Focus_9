@@ -37,7 +37,7 @@ Promote a signed-up user to `store` or `admin` in **Users → Set up → Role**.
 ## 1. Set up Supabase (production database + auth)
 
 1. Create a free project at https://supabase.com
-2. SQL Editor → paste & run `middleware/supabase/schema.sql`, then `middleware/supabase/seed.sql`
+2. SQL Editor → paste & run **`middleware/supabase/setup-all-v3.sql`** — one file, does everything (migration + schema + master data) and is safe to re-run
 3. **Authentication → Providers → Email**: for the smoothest start, turn **off** "Confirm email" (turn it back on later — the apps handle both).
 4. **Settings → API**: copy Project URL, `anon` key, `service_role` key.
 
@@ -118,10 +118,12 @@ Prerequisites on the ERPNext site: an API user with key/secret, **items with the
 
 Code lives at https://github.com/Sachin-Kothandaraman-del/Focus_9 · web: https://prosafe-ega-web.vercel.app · middleware: https://prosafe-ega-middleware.vercel.app
 
-1. **Migrate the Supabase database to the SRS2 model (one-time, before deploying v3)** —
-   Supabase → SQL Editor, run in order: `middleware/supabase/migrate-v2-to-v3.sql` →
-   `schema.sql` → `seed.sql`. User accounts are kept; re-assign each employee's price
-   lists and stores afterwards in **Users → Set up**.
+1. **Update the Supabase database** — Supabase → SQL Editor, paste and run the single
+   file **`middleware/supabase/setup-all-v3.sql`**. It migrates an old database, creates
+   or updates the schema, and refreshes all master data in one go. Safe to re-run: it
+   keeps accounts, shopping profiles, orders, allocations, ERP documents and live stock.
+   (The pieces it is built from live in `supabase/parts/`; regenerate with
+   `node tools/build-seed-sql.js` then `python3 tools/build-setup-sql.py`.)
 2. **Push to GitHub**: `git add -A && git commit -m "…" && git push origin main`
    (`.gitignore` keeps `.env*`, `.vercel/`, `node_modules/`, `middleware/data/` out of the repo).
 3. **Redeploy Vercel** — either run `vercel --prod` inside `middleware/` and again inside

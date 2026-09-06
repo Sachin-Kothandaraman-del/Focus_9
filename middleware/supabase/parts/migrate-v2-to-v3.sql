@@ -83,4 +83,12 @@ begin
   drop table if exists customers cascade;
 end $$;
 
--- Done. Now run schema.sql, then seed.sql.
+-- 4 ── housekeeping: Store and admin accounts are usable as soon as they are
+-- given the role, so clear any stale "Pending" flag on them.
+do $$ begin
+  if exists (select 1 from information_schema.tables where table_name = 'profiles') then
+    update profiles set active = true where role in ('admin', 'store') and active = false;
+  end if;
+end $$;
+
+-- Done. Schema and seed follow in this same file.
