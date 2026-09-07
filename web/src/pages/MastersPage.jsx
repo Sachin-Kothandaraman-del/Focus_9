@@ -7,7 +7,7 @@ import { Chip, Empty, Modal, fmt } from "../ui.jsx";
    Categories, UOM, Item and Price List masters. */
 
 const KINDS = [
-  ["customers", "Customers"], ["contracts", "Contracts"], ["departments", "Departments"],
+  ["customers", "Customers"], ["employees", "Employees"], ["contracts", "Contracts"], ["departments", "Departments"],
   ["locations", "Locations"], ["divisions", "Divisions"], ["stores", "Stores"],
   ["groups", "Groups"], ["categories", "Categories"], ["uoms", "UOM"],
   ["items", "Items"], ["priceLists", "Price Lists"]
@@ -17,6 +17,14 @@ const FIELDS = {
   customers: [
     { k: "id", l: "Code", req: true }, { k: "name", l: "Customer Name", req: true },
     { k: "address", l: "Address" }, { k: "phone", l: "Telephone" }, { k: "fax", l: "Fax" }, { k: "email", l: "E-mail" }
+  ],
+  /* Employee Master — registration checks Employee ID + Mobile Phone against
+     it and fills the rest of the employee's profile in from this record. */
+  employees: [
+    { k: "empId", l: "Employee ID", req: true }, { k: "name", l: "Employee Name", req: true },
+    { k: "customer", l: "Customer Name", sel: "customers", req: true },
+    { k: "dept", l: "Department", sel: "departments" }, { k: "location", l: "Location", sel: "locations" },
+    { k: "phone", l: "Mobile Phone", req: true }, { k: "telephone", l: "Telephone" }, { k: "email", l: "E-mail" }
   ],
   contracts: [
     { k: "ref", l: "Contract Reference", req: true }, { k: "customer", l: "Customer", sel: "customers" },
@@ -40,7 +48,7 @@ const FIELDS = {
   ]
 };
 
-const keyOf = (kind, row) => kind === "uoms" ? row : (row.id ?? row.ref ?? row.code);
+const keyOf = (kind, row) => kind === "uoms" ? row : (row.id ?? row.ref ?? row.empId ?? row.code);
 
 export default function MastersPage() {
   const [m, setM] = useState(null);
@@ -71,12 +79,24 @@ export default function MastersPage() {
   const rows = kind === "uoms" ? m.uoms : (m[kind] || []);
   const fields = FIELDS[kind];
 
+  /* Show the readable name next to a code for fields that point at another
+     master (e.g. Customer C02 → "C02 — Emirates Aluminum"). */
+  const cell = (f, r) => {
+    if (kind === "uoms") return r;
+    const v = r[f.k];
+    if (v == null || v === "") return "—";
+    if (f.num) return fmt(v);
+    const opt = f.sel && selOptions(f.sel).find(([code]) => code === v);
+    return opt ? `${opt[0]} — ${opt[1]}` : String(v);
+  };
   const selOptions = src =>
     src === "customers" ? m.customers.map(c => [c.id, c.name])
     : src === "divisions" ? m.divisions.map(d => [d.code, d.name])
     : src === "uoms" ? m.uoms.map(u => [u, u])
     : src === "groups" ? m.groups.map(g => [g.code, g.name])
     : src === "categories" ? m.categories.map(c => [c.code, c.name])
+    : src === "departments" ? m.departments.map(d => [d.code, d.name])
+    : src === "locations" ? m.locations.map(l => [l.code, l.name])
     : [];
 
   return (
@@ -100,7 +120,7 @@ export default function MastersPage() {
               <tbody>
                 {rows.map(r => (
                   <tr key={keyOf(kind, r)}>
-                    {fields.map(f => <td key={f.k} className="sm">{kind === "uoms" ? r : (f.num ? fmt(r[f.k]) : String(r[f.k] ?? "—"))}</td>)}
+                    {fields.map(f => <td key={f.k} className="sm">{cell(f, r)}</td>)}
                     <td style={{ whiteSpace: "nowrap" }}>
                       {kind !== "uoms" && <button className="btn sm ghost" onClick={() => setEdit({ ...r })}>Edit</button>}{" "}
                       <button className="btn sm red" disabled={busy} onClick={() => remove(keyOf(kind, r))}>✕</button>

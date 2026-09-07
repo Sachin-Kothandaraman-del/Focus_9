@@ -25,13 +25,30 @@ export function StoreProvider({ children }) {
     return r;
   }
 
-  async function signup({ name, email, phone, password }) {
-    const r = await api("/api/auth/signup", { method: "POST", body: { name, email, phone, password } });
+  /* SRS2 registration: the form is validated against the Employee Master
+     first (lookupEmployee), then the whole record is sent to sign up. */
+  async function lookupEmployee({ empId, phone }) {
+    return api("/api/auth/employee-lookup", { method: "POST", body: { empId, phone } });
+  }
+
+  async function signup(body) {
+    const r = await api("/api/auth/signup", { method: "POST", body });
     if (r.token) {
       await setSession(r.token, r.refreshToken);
       setUser(r.user); setPending(!!r.pendingActivation);
     }
     return r; // r.emailConfirmationRequired → caller shows "check your inbox"
+  }
+
+  /* One log-in may hold both the employee and the approver role — switching
+     changes which module the app shows. */
+  async function switchRole(role) {
+    const u = await api("/api/profile/role", { method: "POST", body: { role } });
+    setUser(u);
+    setCart(EMPTY_CART);
+    if (role === "employee") await refreshMe();
+    else { setCatalog(null); setPending(false); }
+    return u;
   }
 
   async function refreshMe() {
@@ -119,7 +136,7 @@ export function StoreProvider({ children }) {
     <Ctx.Provider value={{
       user, customer, pending, catalog, cart, remainingSec, notif,
       orderCart: cart.order, approvalCart: cart.approval,
-      login, signup, logout, deleteAccount, refreshMe, refreshCatalog, refreshCart,
+      login, signup, lookupEmployee, switchRole, logout, deleteAccount, refreshMe, refreshCatalog, refreshCart,
       addToCart, removeCartLine, clearCart, refreshNotifications, markNotificationsRead
     }}>
       {children}

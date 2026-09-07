@@ -84,6 +84,20 @@ module.exports = {
     { id: "C02", name: "Emirates Aluminum", address: "P. O. Box 5678, Abu Dhabi - UAE", phone: "+971 2 323xxxx", fax: "+971 4 512xxxx", email: "emal@gmail.com" }
   ],
 
+  /* Employee Master (SRS2) — the source of truth for who may register.
+     Self-registration validates TWO data points (Employee ID + Mobile Phone)
+     against this master and auto-fills the rest of the profile from it. */
+  employees: [
+    { empId: "ID001", name: "Ahmed Al Mansoori", customer: "C01", dept: "PLDA", location: "DA001", phone: "+971 50 xxxxxx1", telephone: "+971 4 8011001", email: "ahmed.m@dubal.ae" },
+    { empId: "ID002", name: "Khalid Al Suwaidi",  customer: "C01", dept: "MNDA", location: "DA003", phone: "+971 50 xxxxxx2", telephone: "+971 4 8011002", email: "khalid.s@dubal.ae" },
+    { empId: "ID003", name: "Sara Khan",          customer: "C01", dept: "EGDA", location: "DA002", phone: "+971 50 xxxxxx3", telephone: "+971 4 8011003", email: "sara.k@twa.ae" },
+    { empId: "ID004", name: "Imran Sheikh",       customer: "C01", dept: "PLDA", location: "DA001", phone: "+971 50 xxxxxx4", telephone: "+971 4 8011004", email: "imran.s@dubal.ae" },
+    { empId: "ID005", name: "Fatima Al Ali",      customer: "C02", dept: "EGEA", location: "EA002", phone: "+971 50 xxxxxx5", telephone: "+971 2 8012005", email: "fatima.a@emal.ae" },
+    { empId: "ID006", name: "Joseph Mathew",      customer: "C02", dept: "MNEA", location: "EA003", phone: "+971 50 xxxxxx6", telephone: "+971 2 8012006", email: "joseph.m@emal.ae" },
+    { empId: "ID007", name: "Ravi Kumar",         customer: "C02", dept: "PLEA", location: "EA001", phone: "+971 50 xxxxxx7", telephone: "+971 2 8012007", email: "ravi.k@emal.ae" },
+    { empId: "ID008", name: "Mariam Al Zaabi",    customer: "C02", dept: "PLEA", location: "EA001", phone: "+971 50 xxxxxx8", telephone: "+971 2 8012008", email: "mariam.z@emal.ae" }
+  ],
+
   contracts: [
     { ref: "50002834", customer: "C01", value: 500000.0, start: "2026-08-10", end: "2027-08-09" },
     { ref: "60008792", customer: "C02", value: 450000.0, start: "2026-08-20", end: "2027-08-19" }
@@ -196,12 +210,12 @@ module.exports = {
   /* Local-demo-mode logins only (password for all: prosafe1). In Supabase mode, users sign up themselves.
      Roles: employee · approver · store (Store Module) · admin (Store Module + administration). */
   demoUsers: [
-    { id: "local-e1001", empId: "ID001", name: "Ahmed Al Mansoori", email: "ahmed.m@dubal.ae",  phone: "+971 50 xxxxxx1", customer: "C01", dept: "PLDA", location: "DA001", priceLists: ["PL1", "PL2"], fromStore: "EGAMS", toStore: "EGADR", role: "employee", active: true },
-    { id: "local-e1002", empId: "ID007", name: "Ravi Kumar",        email: "ravi.k@emal.ae",    phone: "+971 50 xxxxxx7", customer: "C02", dept: "PLEA", location: "EA001", priceLists: ["PL3"],        fromStore: "EGAMS", toStore: "EGAER", role: "employee", active: true },
-    { id: "local-e1003", empId: "ID003", name: "Sara Khan",         email: "sara.k@twa.ae",     phone: "+971 50 xxxxxx3", customer: "C01", dept: "EGDA", location: "DA002", priceLists: ["PL2"],        fromStore: "EGAMS", toStore: "EGADR", role: "employee", active: true },
-    { id: "local-a2001", empId: "A2001", name: "Mohammed Hassan",   email: "m.hassan@ega.ae",   phone: "+971 50 9876543", customer: "C01", dept: "EGDA", location: null,    priceLists: [],             fromStore: null,    toStore: null,    role: "approver", active: true },
-    { id: "local-w4001", empId: "W4001", name: "EGA Store Keeper",  email: "storekeeper@prosafe.ae", phone: "+971 4 3334466", customer: null, dept: null, location: null, priceLists: [], fromStore: "EGAMS", toStore: "EGADR", role: "store", active: true },
-    { id: "local-s3001", empId: "S3001", name: "PROSAFE Stores",    email: "stores@prosafe.ae", phone: "+971 4 3334455",  customer: null,  dept: null,   location: null,    priceLists: [],             fromStore: null,    toStore: null,    role: "admin",    active: true }
+    { id: "local-e1001", empId: "ID001", name: "Ahmed Al Mansoori", email: "ahmed.m@dubal.ae",  phone: "+971 50 xxxxxx1", customer: "C01", dept: "PLDA", location: "DA001", priceLists: ["PL1", "PL2"], fromStore: "EGAMS", toStore: "EGADR", role: "employee", roles: ["employee", "approver"], telephone: "+971 4 8011001", username: "ahmedm", active: true },
+    { id: "local-e1002", empId: "ID007", name: "Ravi Kumar",        email: "ravi.k@emal.ae",    phone: "+971 50 xxxxxx7", customer: "C02", dept: "PLEA", location: "EA001", priceLists: ["PL3"],        fromStore: "EGAMS", toStore: "EGAER", role: "employee", roles: ["employee"], telephone: "+971 2 8012007", username: "ravik",  active: true },
+    { id: "local-e1003", empId: "ID003", name: "Sara Khan",         email: "sara.k@twa.ae",     phone: "+971 50 xxxxxx3", customer: "C01", dept: "EGDA", location: "DA002", priceLists: ["PL2"],        fromStore: "EGAMS", toStore: "EGADR", role: "employee", roles: ["employee"], telephone: "+971 4 8011003", username: "sarak",  active: true },
+    { id: "local-a2001", empId: "A2001", name: "Mohammed Hassan",   email: "m.hassan@ega.ae",   phone: "+971 50 9876543", customer: "C01", dept: "EGDA", location: null,    priceLists: [],             fromStore: null,    toStore: null,    role: "approver", roles: ["approver"], telephone: "+971 4 8010000", username: "mhassan", active: true },
+    { id: "local-w4001", empId: "W4001", name: "EGA Store Keeper",  email: "storekeeper@prosafe.ae", phone: "+971 4 3334466", customer: null, dept: null, location: null, priceLists: [], fromStore: "EGAMS", toStore: "EGADR", role: "store",    roles: ["store"],    telephone: "+971 4 3334466", username: "keeper",  active: true },
+    { id: "local-s3001", empId: "S3001", name: "PROSAFE Stores",    email: "stores@prosafe.ae", phone: "+971 4 3334455",  customer: null,  dept: null,   location: null,    priceLists: [],             fromStore: null,    toStore: null,    role: "admin",    roles: ["admin"],    telephone: "+971 4 3334455", username: "prosafe", active: true }
   ],
 
   seq: { or: 1000, so: 5000, dn: 3000, inv: 9000, ret: 7000, cn: 7500, stv: 6000, emp: 1003 }

@@ -18,20 +18,33 @@ Groups & Categories).
    web/                                       middleware/
 ```
 
-**Features (SRS2, 25-08-26)**: e-mail/password **account creation**, **login**, **account deletion** (Play Store requirement) · self-signup with **admin activation** (customer, department, location, **multiple price lists** = multiple shopping tabs, From/To stores) · full masters incl. **Contracts, Divisions, Stores (Main + Reservation), Groups & Categories** with an admin Masters editor · price lists with **validity dates + delivery period** and size-variant lines sharing one allocation · shopping screen header with **Total Allocated / Total Used Amounts** · live **Main-store stock** on every item · server-side carts that **reserve stock on picking with a 10-minute window** (expiry releases stock) · within-limit → Order Cart, over-limit → Approval Cart (both debit Used Qty) · order placement **stock-transfers reserved qtys Main → Reservation store** (Issue + Receipt vouchers) · **delivery-date rules** (order date + delivery period / "DOD to be advised" / partial-stock line split) · **3-day approval window** with auto-cancel · **Re-save** (single + bulk) to fill DOD lines when stock arrives, with employee notifications · DOs issued **from the Reservation store** with employee acknowledgement (Receipt Voucher process removed) · **returns within 3 days of receipt** with store **Return Confirmation** crediting the price list + Main store and raising a **Credit Note** · balance cancellation by Stores · DO-consolidated invoicing · per-store **inventory screen** with manual adjustments & transfers · **four roles** — see below.
+**Features (SRS2, 25-08-26 + Sept-26 revisions)**: **Employee Master**-validated
+self-registration (Employee ID + Mobile Phone are checked against the master, the rest of the
+form is auto-filled, and registration is refused if the two data points do not match) ·
+**one log-in, both modules** — a user can hold the Employee *and* the Approver role and switch
+between them in the app · **store log-ins created in the Admin Module** with an e-mail and
+password, independent of the Employee Master · e-mail/password **account creation**, **login**, **account deletion** (Play Store requirement) · self-signup with **admin activation** (customer, department, location, **multiple price lists** = multiple shopping tabs, From/To stores) · full masters incl. **Contracts, Divisions, Stores (Main + Reservation), Groups & Categories** with an admin Masters editor · price lists with **validity dates + delivery period** and size-variant lines sharing one allocation · shopping screen header with **Total Allocated / Total Used Amounts** · live **Main-store stock** on every item · server-side carts that **reserve stock on picking with a 10-minute window** (expiry releases stock) · within-limit → Order Cart, over-limit → Approval Cart (both debit Used Qty) · order placement **stock-transfers reserved qtys Main → Reservation store** (Issue + Receipt vouchers) · **delivery-date rules** (order date + delivery period / "DOD to be advised" / partial-stock line split) · **3-day approval window** with auto-cancel · **Re-save** (single + bulk) to fill DOD lines when stock arrives, with employee notifications · DOs issued **from the Reservation store** with employee acknowledgement (Receipt Voucher process removed) · **returns within 3 days of receipt** with store **Return Confirmation** crediting the price list + Main store and raising a **Credit Note** · balance cancellation by Stores · DO-consolidated invoicing · per-store **inventory screen** with manual adjustments & transfers · **four roles** — see below.
 
 **Roles**
 | Role | Can do | Cannot do |
 |---|---|---|
 | `employee` | Shopping list, carts, own orders, DO acknowledgement, returns, My Limits | Anything in the Store Module or administration |
-| `approver` | EGA client approval (approve line-wise / reject), view all orders & masters | Fulfilment, inventory, administration |
+| `approver` | EGA client approval (approve line-wise / reject); All Orders shows just **Orders for Approval · Approved Orders · Orders Rejected** | Fulfilment, inventory, administration |
 | `store` | **Store Module** — Fulfilment (Delivery Notes, Re-save single/bulk, Return Confirmation, DO consolidation & invoicing, cancel undelivered balance), Inventory (stock per store, adjustments, Issue/Receipt transfers), All Orders | Users, Masters, deleting accounts |
 | `admin` | **Admin Module** — Users (roles, shopping profiles, activation) and Masters (all master data incl. the price-list editor) | The Store Module: no Fulfilment, Inventory or All Orders |
 
 The modules are **strictly separate**, as in SRS2: an admin does not get the Store
-Module screens, and a store user does not get Users or Masters. Anyone who needs
-both is given two accounts. Assign roles in **Users → Set up → Role**; promoting to
-`admin` is permanent, while `store` can be changed or deactivated at any time.
+Module screens, and a store user does not get Users or Masters.
+
+One log-in may hold **Employee and Approver together** — tick both in **Users → Set up →
+Role/s** and the user gets a *Module* switcher in the sidebar (a bar above the tabs on the
+phone) to move between the two. `store` and `admin` are standalone: a log-in holds one of
+them on its own. Promoting to `admin` is permanent; `store` can be changed or deactivated at
+any time.
+
+**Store log-ins** are created in the Admin Module itself — **Users → ＋ New log-in** — with a
+user name (e-mail) and a password. The stores are under PROSAFE control, so a store log-in has
+**no dependency on the Employee Master**. The same screen creates approver and admin log-ins.
 
 **Two run modes** (auto-detected): leave Supabase keys empty → **local demo mode** (JSON DB, demo logins, password `prosafe1`); fill them in → **production mode** (Supabase Postgres + Supabase Auth).
 
@@ -60,7 +73,12 @@ Edit `.env`:
 npm start          # → http://localhost:4000  (log line shows storage/auth/erp modes)
 ```
 
-**Demo-mode logins** (password `prosafe1`): ahmed.m@dubal.ae · ravi.k@emal.ae · sara.k@twa.ae (employees) · m.hassan@ega.ae (approver) · storekeeper@prosafe.ae (**store**) · stores@prosafe.ae (admin). In Supabase mode there are no demo users — everyone signs up.
+**Demo-mode logins** (password `prosafe1`; sign in with the e-mail **or** the user name):
+ahmed.m@dubal.ae / `ahmedm` (**employee + approver** — try the module switcher) · ravi.k@emal.ae / `ravik` ·
+sara.k@twa.ae / `sarak` (employees) · m.hassan@ega.ae / `mhassan` (approver) ·
+storekeeper@prosafe.ae / `keeper` (**store**) · stores@prosafe.ae / `prosafe` (admin).
+The demo Employee Master holds ID001–ID008, so registration can be tried with, say,
+**ID005 + `+971 50 xxxxxx5`**. In Supabase mode there are no demo users — everyone registers.
 
 ## 3. Run the website
 
@@ -83,13 +101,19 @@ Set the middleware URL in `mobile/src/config.js` (LAN IP for a physical phone, H
 
 ## 5. First-run walkthrough
 
-1. Open web or mobile → **Create Account** with your `ADMIN_EMAILS` address → you're instantly an active admin.
-2. Colleagues sign up → they see "awaiting activation".
-3. Admin (web → **Users**): assign role/company/department/price list → **Activate**.
-4. Employee shops → orders within limits create the ERP SO instantly; over-limit/restricted items go to the **Approval** bucket.
-5. Approver approves (SO created, approved-qty list raised) or rejects.
-6. **Stores** (a user with the `store` role) creates Delivery Notes → employee acknowledges receipt → returns are confirmed by Stores and credit the allocation → Stores consolidates DOs → invoice to EGA.
-7. Anyone can delete their own account from **Profile** (admin can also delete users).
+1. Open web or mobile → **Register** with your `ADMIN_EMAILS` address → you're instantly an active admin
+   (the bootstrap address is the only one that may register without an Employee Master record).
+2. Admin (web → **Masters → Employees**): load the Employee Master — Employee ID, Name, Customer,
+   Department, Location, Mobile Phone, Telephone, E-mail.
+3. Colleagues **Register**: they type their Employee ID and Mobile Phone, those two data points are
+   checked against the Employee Master, the rest of the form is filled in for them, and they choose a
+   user name (max 8) and password (min 6). The profile is created **Pending for Activation**.
+4. Admin (web → **Users**): assign the role/s (Employee, Approver, or both), company, department,
+   price list/s and stores → **Activate**.
+5. Employee shops → orders within limits create the ERP SO instantly; over-limit/restricted items go to the **Approval** bucket.
+6. Approver approves (SO created, approved-qty list raised) or rejects.
+7. **Stores** (a user with the `store` role) creates Delivery Notes → employee acknowledges receipt → returns are confirmed by Stores and credit the allocation → Stores consolidates DOs → invoice to EGA.
+8. Anyone can delete their own account from **Profile** (admin can also delete users).
 
 ## 6. ERPNext integration (live ERP)
 
@@ -149,7 +173,7 @@ prosafe-app/
 ├── middleware/                 Node.js business-logic layer (v3 — SRS2 25-08-26)
 │   ├── server.js               REST API — auth, orders, approvals, fulfilment, admin
 │   ├── auth.js                 signup / login / refresh / account deletion (Supabase Auth or local)
-│   ├── store/                  supabase.js (Postgres) · local.js (JSON demo) · seed-data.js
+│   ├── store/                  supabase.js (Postgres) · local.js (JSON demo) · seed-data.js (incl. Employee Master)
 │   ├── erp/                    erpnext.js (live) · focus9.js (stub) · index.js (selector + retry)
 │   └── supabase/               schema.sql · seed.sql  (paste into Supabase SQL editor)
 ├── web/                        React + Vite portal (all roles) → deploy dist/ anywhere

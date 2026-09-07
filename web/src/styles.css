@@ -93,3 +93,13 @@ label.f { display: block; font-size: .7rem; font-weight: 700; color: var(--mut);
   .side nav { display: flex; gap: 4px; flex-wrap: wrap; }
   .main { padding: 16px; }
 }
+
+/* Module switcher — shown when one log-in holds more than one role (SRS2). */
+.roleswitch { margin-top: 14px; }
+.roleswitch button {
+  display: block; width: 100%; text-align: left; margin-bottom: 5px; cursor: pointer;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14);
+  color: #cfe0ef; border-radius: 8px; padding: 7px 10px; font-size: .74rem; font-weight: 700;
+}
+.roleswitch button:hover { background: rgba(255,255,255,.14); }
+.roleswitch button.on { background: var(--orange); border-color: var(--orange); color: #fff; }

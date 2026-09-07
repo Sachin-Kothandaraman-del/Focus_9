@@ -7,15 +7,28 @@ const BUCKETS = [
   ["all", "Orders"], ["progress", "Orders in Progress"], ["approval", "Order Approval"],
   ["complete", "Order Completed"], ["returns", "Return Orders"], ["cancel", "Cancelled"], ["reject", "Rejected"]
 ];
+/* The approver only ever looks at the approval cycle (SRS2 Sept-26), so their
+   All Orders screen carries just these three buckets. */
+const APPROVER_BUCKETS = [
+  ["approval", "Orders for Approval"], ["approved", "Approved Orders"], ["reject", "Orders Rejected"]
+];
 const bucketOf = o => ({
   pending_approval: "approval", in_progress: "progress", partially_delivered: "progress", do_created: "progress",
   partially_received: "progress", complete: "complete", cancelled: "cancel", rejected: "reject"
 }[o.status] || "all");
+/* "Approved Orders" = everything an approver has released, whatever happened
+   to it afterwards (in progress, delivered, complete). */
+const isApproved = o => !!o.approvedAt;
+const inBucketFor = (o, id) =>
+  id === "all" ? true
+  : id === "returns" ? (o.returns || []).length > 0
+  : id === "approved" ? isApproved(o)
+  : bucketOf(o) === id;
 
 export default function OrdersPage() {
   const { user, refreshCatalog } = useApp();
   const [orders, setOrders] = useState(null);
-  const [bucket, setBucket] = useState("all");
+  const [bucket, setBucket] = useState(null);   // set once the role is known
   const [sel, setSel] = useState(null);          // selected order (detail modal)
   const [mode, setMode] = useState(null);        // "return" | null
   const [vals, setVals] = useState({});          // return qty per lineRef
@@ -93,10 +106,9 @@ export default function OrdersPage() {
   }
 
   if (!orders) return <Empty icon="⏳" text="Loading orders…" />;
-  const inBucket = o => bucket === "all" ? true
-    : bucket === "returns" ? (o.returns || []).length > 0
-    : bucketOf(o) === bucket;
-  const list = orders.filter(inBucket);
+  const buckets = user.role === "approver" ? APPROVER_BUCKETS : BUCKETS;
+  const current = bucket && buckets.some(([id]) => id === bucket) ? bucket : buckets[0][0];
+  const list = orders.filter(o => inBucketFor(o, current));
   const mine = o => user.role === "employee" && o.emp === user.id;
   const returnable = l => Math.max(0, (l.received || 0) - (l.returned || 0));
 
@@ -104,9 +116,9 @@ export default function OrdersPage() {
     <>
       <h1>{user.role === "employee" ? "My Orders" : "All Orders"}</h1>
       <div className="tabsbar">
-        {BUCKETS.map(([id, lbl]) => {
-          const n = id === "all" ? orders.length : orders.filter(o => id === "returns" ? (o.returns || []).length > 0 : bucketOf(o) === id).length;
-          return <button key={id} className={bucket === id ? "on" : ""} onClick={() => setBucket(id)}>{lbl}{n ? ` (${n})` : ""}</button>;
+        {buckets.map(([id, lbl]) => {
+          const n = orders.filter(o => inBucketFor(o, id)).length;
+          return <button key={id} className={current === id ? "on" : ""} onClick={() => setBucket(id)}>{lbl}{n ? ` (${n})` : ""}</button>;
         })}
       </div>
       {list.length === 0 && <Empty text="No orders in this bucket" />}

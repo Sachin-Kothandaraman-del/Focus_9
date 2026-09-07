@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { Routes, Route, NavLink, Navigate } from "react-router-dom";
+import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import { api, setSession, hasSession } from "./api";
 
 import AuthPage from "./pages/AuthPage.jsx";
@@ -16,9 +16,13 @@ import ProfilePage from "./pages/ProfilePage.jsx";
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
+/* Module names as they appear in SRS2. */
+const MODULE = { employee: "Employee Module", approver: "Approver Module", store: "Store Module", admin: "Admin Module" };
+
 const EMPTY_CART = { order: [], approval: [], startedAt: null, expiresAt: null, remainingSec: null };
 
 export default function App() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [customer, setCustomer] = useState(null);
   const [pending, setPending] = useState(false);
@@ -108,6 +112,19 @@ export default function App() {
     try { const r = await api("/api/cart/clear", { method: "POST", body: { kind } }); setCart(r); setRemainingSec(r.remainingSec); refreshCatalog(); }
     catch (e) { alert(e.message); }
   }
+  /* One log-in may hold both the employee and the approver role (SRS2).
+     Switching changes which module the session is in; the server checks the
+     active role on every request. */
+  async function switchRole(role) {
+    try {
+      const u = await api("/api/profile/role", { method: "POST", body: { role } });
+      setUser(u);
+      setCart(EMPTY_CART); setRemainingSec(null);
+      if (role === "employee") { await refreshMe(); }
+      else { setCatalog(null); setPending(false); }
+      navigate("/", { replace: true });
+    } catch (e) { alert(e.message); }
+  }
   async function markNotificationsRead() {
     try { await api("/api/notifications/read", { method: "POST" }); refreshNotifications(); } catch (e) {}
   }
@@ -115,7 +132,7 @@ export default function App() {
   const ctx = {
     user, customer, pending, catalog, cart, remainingSec, notif,
     setUser, setCustomer, setPending, refreshMe, refreshCatalog, refreshCart, logout,
-    addToCart, removeCartLine, clearCart, refreshNotifications, markNotificationsRead
+    addToCart, removeCartLine, clearCart, refreshNotifications, markNotificationsRead, switchRole
   };
 
   if (booting) return <div className="empty" style={{ paddingTop: 120 }}>Loading…</div>;
@@ -132,6 +149,9 @@ export default function App() {
               Hi {user.name}. The PROSAFE admin still needs to assign your company, department, price list and stores.
             </p>
             <button className="btn" onClick={refreshMe}>Check again</button>{" "}
+            {(user.roles || []).filter(r => r !== "employee").map(r => (
+              <button key={r} className="btn blue" onClick={() => switchRole(r)}>Switch to {MODULE[r] || r}</button>
+            ))}{" "}
             <button className="btn ghost" onClick={logout}>Sign out</button>
           </div>
         </div>
@@ -151,8 +171,10 @@ export default function App() {
         ? [["/fulfil", "🚚 Fulfilment"], ["/inventory", "🏬 Inventory"], ["/orders", "🗂️ All Orders"], ["/profile", "👤 Profile"]]
         : [["/users", "👥 Users"], ["/masters", "📚 Masters"], ["/profile", "👤 Profile"]];
   const home = links[0][0];
-  const isAdmin = user.role === "admin";
-  const isStoreUser = user.role === "store";
+  /* Only the screens of the module the user is currently in are reachable —
+     switching module (employee ⇄ approver) changes this set. */
+  const allowed = new Set(links.map(([to]) => to));
+  const Only = ({ path, children }) => (allowed.has(path) ? children : <Navigate to={home} replace />);
 
   return (
     <Ctx.Provider value={ctx}>
@@ -161,6 +183,16 @@ export default function App() {
           <div>
             <div className="logo">PRO<span>SAFE</span></div>
             <div className="who">{user.name}<br />{user.empId} · {user.role}</div>
+            {(user.roles || []).length > 1 && (
+              <div className="roleswitch">
+                <div className="xs mut" style={{ marginBottom: 4 }}>Module</div>
+                {(user.roles || []).map(r => (
+                  <button key={r} className={r === user.role ? "on" : ""} onClick={() => r !== user.role && switchRole(r)}>
+                    {MODULE[r] || r}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <nav>
             {links.map(([to, label]) => <NavLink key={to} to={to}>{label}</NavLink>)}
@@ -182,14 +214,14 @@ export default function App() {
         </aside>
         <main className="main">
           <Routes>
-            <Route path="/shop" element={<ShopPage />} />
-            <Route path="/carts" element={<CartsPage />} />
-            <Route path="/orders" element={isAdmin ? <Navigate to={home} replace /> : <OrdersPage />} />
-            <Route path="/approvals" element={<ApprovalsPage />} />
-            <Route path="/fulfil" element={isAdmin ? <Navigate to={home} replace /> : <FulfilPage />} />
-            <Route path="/inventory" element={isAdmin ? <Navigate to={home} replace /> : <InventoryPage />} />
-            <Route path="/masters" element={isAdmin ? <MastersPage /> : <Navigate to={home} replace />} />
-            <Route path="/users" element={isAdmin ? <UsersPage /> : <Navigate to={home} replace />} />
+            <Route path="/shop"      element={<Only path="/shop"><ShopPage /></Only>} />
+            <Route path="/carts"     element={<Only path="/carts"><CartsPage /></Only>} />
+            <Route path="/orders"    element={<Only path="/orders"><OrdersPage /></Only>} />
+            <Route path="/approvals" element={<Only path="/approvals"><ApprovalsPage /></Only>} />
+            <Route path="/fulfil"    element={<Only path="/fulfil"><FulfilPage /></Only>} />
+            <Route path="/inventory" element={<Only path="/inventory"><InventoryPage /></Only>} />
+            <Route path="/masters"   element={<Only path="/masters"><MastersPage /></Only>} />
+            <Route path="/users"     element={<Only path="/users"><UsersPage /></Only>} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to={home} replace />} />
           </Routes>

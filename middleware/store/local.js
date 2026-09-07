@@ -5,17 +5,24 @@ const seed = require("./seed-data");
 
 const DATA_DIR = path.join(__dirname, "..", "data");
 const DATA_FILE = path.join(DATA_DIR, "db.json");
-const DB_VERSION = 5; // SRS2 model + item photos + separate "store" role
+const DB_VERSION = 6; // SRS2 model + item photos + "store" role + Employee Master & multi-role
 let db = null;
 
 const clone = x => JSON.parse(JSON.stringify(x));
+
+/* Primary key of each master (same map as store/supabase.js). */
+const masterKey = kind =>
+  kind === "customers" || kind === "priceLists" ? "id"
+  : kind === "contracts" ? "ref"
+  : kind === "employees" ? "empId"
+  : "code";
 
 function freshDb() {
   return {
     version: DB_VERSION,
     profiles: seed.demoUsers.map(u => ({ ...u, createdAt: new Date().toISOString() })),
     masters: clone({
-      customers: seed.customers, contracts: seed.contracts, departments: seed.departments,
+      customers: seed.customers, employees: seed.employees, contracts: seed.contracts, departments: seed.departments,
       locations: seed.locations, divisions: seed.divisions, stores: seed.stores,
       groups: seed.groups, categories: seed.categories, uoms: seed.uoms,
       items: seed.items, priceLists: seed.priceLists
@@ -73,7 +80,7 @@ module.exports = {
       persist();
       return v;
     }
-    const key = idField || (list[0] && ("id" in list[0] ? "id" : "code")) || "id";
+    const key = idField || masterKey(kind);
     const id = obj[key];
     if (!id) throw new Error(`Field '${key}' is required`);
     const ix = list.findIndex(x => x[key] === id);
@@ -88,8 +95,7 @@ module.exports = {
     if (!Array.isArray(list)) throw new Error(`Unknown master '${kind}'`);
     if (kind === "uoms") d.masters.uoms = list.filter(u => u !== id);
     else {
-      const key = (list[0] && ("id" in list[0] ? "id" : "code")) || "id";
-      d.masters[kind] = list.filter(x => x[key] !== id);
+      d.masters[kind] = list.filter(x => x[masterKey(kind)] !== id);
     }
     persist();
   },
@@ -138,6 +144,11 @@ module.exports = {
   async getProfile(id) { return loadSync().profiles.find(p => p.id === id) || null; },
   async getProfileByEmail(email) {
     return loadSync().profiles.find(p => p.email.toLowerCase() === String(email).toLowerCase()) || null;
+  },
+  async getProfileByUsername(username) {
+    const u = String(username || "").trim().toLowerCase();
+    if (!u) return null;
+    return loadSync().profiles.find(p => String(p.username || "").toLowerCase() === u) || null;
   },
   async createProfile(p) { loadSync().profiles.push(p); persist(); return p; },
   async updateProfile(id, patch) {

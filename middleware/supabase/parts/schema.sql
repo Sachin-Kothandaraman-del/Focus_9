@@ -31,7 +31,11 @@ create table if not exists profiles (
   name        text not null,
   phone       text default '',
   emp_id      text default '',
+  telephone   text default '',
+  username    text default '',                -- employee's chosen log-in name (max 8)
   role        text not null default 'employee' check (role in ('employee','approver','store','admin')),
+  roles       jsonb not null default '[]',    -- every module this log-in may use
+
   customer    text,
   dept        text,
   location    text,
@@ -156,6 +160,16 @@ begin
   end if;
   return v;
 end $$;
+
+-- ── SRS2 (Sept-26): Employee Master + multiple roles per log-in ────
+-- Added by ALTER so an existing database picks them up on a re-run.
+alter table profiles add column if not exists telephone text default '';
+alter table profiles add column if not exists username  text default '';
+alter table profiles add column if not exists roles     jsonb not null default '[]'::jsonb;
+-- Back-fill roles for accounts created before multi-role existed.
+update profiles set roles = to_jsonb(array[role]) where roles = '[]'::jsonb;
+create unique index if not exists profiles_username_uidx
+  on profiles (lower(username)) where username <> '';
 
 -- ── lock the tables down (middleware uses the service role key) ────
 alter table masters       enable row level security;

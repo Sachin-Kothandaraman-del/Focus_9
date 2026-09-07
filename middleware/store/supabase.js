@@ -17,10 +17,12 @@ function ok(r) {
   if (r.error) throw new Error("Supabase: " + r.error.message);
   return r.data;
 }
-const P = "id, email, name, phone, emp_id, role, customer, dept, location, price_list, price_lists, from_store, to_store, active, created_at";
+const P = "id, email, name, phone, telephone, username, emp_id, role, roles, customer, dept, location, price_list, price_lists, from_store, to_store, active, created_at";
 const toProfile = r => r && ({
-  id: r.id, email: r.email, name: r.name, phone: r.phone, empId: r.emp_id,
-  role: r.role, customer: r.customer, dept: r.dept, location: r.location,
+  id: r.id, email: r.email, name: r.name, phone: r.phone,
+  telephone: r.telephone || "", username: r.username || "", empId: r.emp_id,
+  role: r.role, roles: (r.roles && r.roles.length ? r.roles : [r.role]),
+  customer: r.customer, dept: r.dept, location: r.location,
   priceList: r.price_list, priceLists: r.price_lists || [],
   fromStore: r.from_store, toStore: r.to_store,
   active: r.active, createdAt: r.created_at
@@ -31,8 +33,12 @@ const fromPatch = p => {
   for (const [k, v] of Object.entries(p)) m[map[k] || k] = v;
   return m;
 };
-const MASTER_ORDER = ["customers", "contracts", "departments", "locations", "divisions", "stores", "groups", "categories", "uoms", "items", "priceLists"];
-const masterKey = kind => kind === "customers" || kind === "priceLists" ? "id" : kind === "contracts" ? "ref" : "code";
+const MASTER_ORDER = ["customers", "employees", "contracts", "departments", "locations", "divisions", "stores", "groups", "categories", "uoms", "items", "priceLists"];
+const masterKey = kind =>
+  kind === "customers" || kind === "priceLists" ? "id"
+  : kind === "contracts" ? "ref"
+  : kind === "employees" ? "empId"
+  : "code";
 
 module.exports = {
   mode: "supabase",
@@ -126,6 +132,11 @@ module.exports = {
   },
   async getProfileByEmail(email) {
     return toProfile(ok(await client().from("profiles").select(P).ilike("email", email).maybeSingle()));
+  },
+  async getProfileByUsername(username) {
+    const u = String(username || "").trim();
+    if (!u) return null;
+    return toProfile(ok(await client().from("profiles").select(P).ilike("username", u).maybeSingle()));
   },
   async createProfile(p) {
     return toProfile(ok(await client().from("profiles").insert(fromPatch(p)).select(P).single()));

@@ -56,6 +56,27 @@ const requireAuth = authsvc.requireAuth;
 const STORES_ROLES = ["store"];
 const isStores = u => !!u && STORES_ROLES.includes(u.role);
 
+/* One log-in may hold BOTH the employee and the approver role (SRS2 Sept-26:
+   "assign the role either as Employee (OR) Approver (OR) Both") and switch
+   between the two modules with POST /api/profile/role. The Store and Admin
+   modules stay standalone — a store or admin log-in holds that role alone.
+     profile.roles — every module this log-in may use
+     profile.role  — the module currently in use (always a member of roles) */
+const ALL_ROLES = ["employee", "approver", "store", "admin"];
+const SWITCHABLE = ["employee", "approver"];
+const rolesOf = u => {
+  const r = Array.isArray(u && u.roles) && u.roles.length ? u.roles : [u && u.role].filter(Boolean);
+  return ALL_ROLES.filter(x => r.includes(x));           // de-duplicated, in module order
+};
+function validateRoles(list) {
+  if (!Array.isArray(list) || !list.length) return "Assign at least one role";
+  for (const r of list) if (!ALL_ROLES.includes(r)) return `Unknown role '${r}' — use ${ALL_ROLES.join("|")}`;
+  const uniq = [...new Set(list)];
+  if (uniq.length > 1 && uniq.some(r => !SWITCHABLE.includes(r)))
+    return "Only the employee and approver roles can be combined in one log-in — store and admin log-ins hold that role alone";
+  return null;
+}
+
 /* Serverless-friendly init gate + periodic sweeps (cart expiry / approval expiry). */
 let _ready = null;
 app.use((req, res, next) => {
@@ -88,8 +109,12 @@ const userPls = u => Array.isArray(u.priceLists) && u.priceLists.length ? u.pric
 const isPending = u => u.role === "employee" && (!u.active || !userPls(u).length);
 
 function pub(profile) {
-  const { id, email, name, phone, empId, role, customer, dept, location, priceList, fromStore, toStore, active } = profile;
-  return { id, email, name, phone, empId, role, customer, dept, location, priceLists: userPls(profile), priceList, fromStore, toStore, active };
+  const { id, email, name, phone, telephone, username, empId, role, customer, dept, location, priceList, fromStore, toStore, active } = profile;
+  return {
+    id, email, name, phone, telephone: telephone || "", username: username || "", empId,
+    role, roles: rolesOf(profile), customer, dept, location,
+    priceLists: userPls(profile), priceList, fromStore, toStore, active
+  };
 }
 
 async function findItem(m, code) { return m.items.find(i => i.code === code); }
@@ -254,6 +279,31 @@ function orderDTO(o) {
 }
 
 /* ══════════════════ AUTH & ACCOUNT LIFECYCLE ══════════════════ */
+
+/* SRS2 registration screen: the employee types Employee ID + Mobile Phone and
+   the rest of the form is filled in from the Employee Master. Two data points
+   must match; if they do not, registration is refused. */
+app.post("/api/auth/employee-lookup", wrap(async (req, res) => {
+  const { empId, phone } = req.body || {};
+  const emp = await authsvc.matchEmployee({ empId, phone });
+  const m = await masters();
+  res.json({
+    ok: true,
+    employee: {
+      empId: emp.empId, name: emp.name || "", phone: emp.phone || "",
+      telephone: emp.telephone || "", email: emp.email || "",
+      customer: emp.customer || null,
+      customerName: (m.customers.find(c => c.id === emp.customer) || {}).name || emp.customer || "",
+      dept: emp.dept || null,
+      deptName: (m.departments.find(d => d.code === emp.dept) || {}).name || emp.dept || "",
+      location: emp.location || null,
+      locationName: (m.locations.find(l => l.code === emp.location) || {}).name || emp.location || ""
+    },
+    limits: authsvc.LIMITS,
+    minPassword: authsvc.MIN_PASSWORD
+  });
+}));
+
 app.post("/api/auth/signup", wrap(async (req, res) => {
   const { profile, session, pendingActivation } = await authsvc.signup(req.body || {});
   res.status(201).json({
@@ -263,7 +313,7 @@ app.post("/api/auth/signup", wrap(async (req, res) => {
     pendingActivation,
     emailConfirmationRequired: !session && authsvc.SUPA,
     message: pendingActivation
-      ? "Account created. A PROSAFE admin must assign your company, price list and stores before you can order."
+      ? "Registration complete — your profile is Pending for Activation. A PROSAFE admin will assign your price list and stores."
       : "Admin account created and activated."
   });
 }));
@@ -321,6 +371,20 @@ app.get("/api/profile", requireAuth(), wrap(async (req, res) => {
     priceLists,
     pendingActivation: isPending(u)
   });
+}));
+
+/* Switch between the modules this log-in holds (employee ⇄ approver).
+   requireAuth() checks the ACTIVE role, so the switch is what opens or closes
+   each module for the session. */
+app.post("/api/profile/role", requireAuth(), wrap(async (req, res) => {
+  const role = String((req.body || {}).role || "").trim();
+  const held = rolesOf(req.user);
+  if (!held.includes(role))
+    return res.status(403).json({ error: `This log-in does not hold the ${role || "requested"} role` });
+  if (role === req.user.role) return res.json(pub(req.user));
+  await clearCartInternal(req.user, null);      // leaving the Employee Module releases any held stock
+  const p = await store.updateProfile(req.user.id, { role });
+  res.json(pub(p));
 }));
 
 /* ══════════════════ NOTIFICATIONS ══════════════════ */
@@ -724,6 +788,10 @@ app.post("/api/orders/:ref/approve", requireAuth("approver"), wrap(async (req, r
     return res.status(422).json({ error: "Approve at least one line, or reject the order" });
   o.total = round2(o.lines.reduce((s, l) => s + l.amount, 0));
   o.status = "in_progress";
+  /* Stamped so the approver's "Approved Orders" bucket keeps the order even
+     after it moves on to delivery. */
+  o.approvedAt = nowIso();
+  o.approvedBy = req.user.name;
   o.history.push({
     at: nowIso(),
     ev: `Approved line-wise by ${req.user.name} (EGA) — ${o.lines.map(l => `${l.code}: ${targetQty(l)}/${l.orderedQty}`).join(", ")}`
@@ -1058,16 +1126,48 @@ app.get("/api/admin/users", requireAuth("admin"), wrap(async (req, res) => {
   res.json((await store.listProfiles()).map(pub));
 }));
 
+/* SRS2: "Store Log-in credential set-up in Admin Module, with user name
+   (e-mail) and password. As the store is under PROSAFE control, there is no
+   dependency on the Employee Master for the store log-in credential."
+   The same screen also creates approver and admin log-ins. */
+app.post("/api/admin/users", requireAuth("admin"), wrap(async (req, res) => {
+  const body = req.body || {};
+  const roles = Array.isArray(body.roles) && body.roles.length ? body.roles : [body.role].filter(Boolean);
+  const bad = validateRoles(roles);
+  if (bad) return res.status(400).json({ error: bad });
+  const p = await authsvc.adminCreateLogin({ ...body, roles, role: roles[0] });
+  await store.erpLog(`Log-in created by ${req.user.name}: ${p.email} (${roles.join(" + ")})`);
+  res.status(201).json(pub(p));
+}));
+
 app.patch("/api/admin/users/:id", requireAuth("admin"), wrap(async (req, res) => {
   const existing = await store.getProfile(req.params.id);
   if (!existing) return res.status(404).json({ error: "User not found" });
   if (existing.role === "admin")
     return res.status(403).json({ error: "Administrator accounts are protected and cannot be edited, deactivated, or have their role changed" });
-  const allowed = ["role", "customer", "dept", "location", "priceList", "priceLists", "fromStore", "toStore", "active", "empId", "name", "phone"];
+  const allowed = ["role", "roles", "customer", "dept", "location", "priceList", "priceLists", "fromStore", "toStore", "active", "empId", "name", "phone", "telephone", "username"];
   const patch = {};
   for (const k of allowed) if (k in (req.body || {})) patch[k] = req.body[k];
-  if (patch.role && !["employee", "approver", "store", "admin"].includes(patch.role))
+  /* One log-in can hold employee + approver and switch between the two
+     modules; store and admin are standalone. `role` is whichever module the
+     user is currently in and must always be one of the assigned roles. */
+  if ("roles" in patch) {
+    const bad = validateRoles(patch.roles);
+    if (bad) return res.status(400).json({ error: bad });
+    patch.roles = ALL_ROLES.filter(r => patch.roles.includes(r));
+    if (!patch.roles.includes(patch.role || existing.role)) patch.role = patch.roles[0];
+  } else if (patch.role) {
+    patch.roles = [patch.role];
+  }
+  if (patch.role && !ALL_ROLES.includes(patch.role))
     return res.status(400).json({ error: "role must be employee|approver|store|admin" });
+  if ("username" in patch && patch.username) {
+    patch.username = String(patch.username).trim().slice(0, 8);
+    if (store.getProfileByUsername) {
+      const clash = await store.getProfileByUsername(patch.username);
+      if (clash && clash.id !== req.params.id) return res.status(409).json({ error: "That User Name is already taken" });
+    }
+  }
   if ("priceList" in patch && !("priceLists" in patch))
     patch.priceLists = patch.priceList ? [patch.priceList] : [];
   if ("priceLists" in patch) {
@@ -1081,6 +1181,8 @@ app.patch("/api/admin/users/:id", requireAuth("admin"), wrap(async (req, res) =>
   // subsequent requests are rejected by the protection above.
   // Store and admin accounts are usable the moment they are promoted.
   if (patch.role === "admin" || patch.role === "store") patch.active = true;
+  /* An approver-only log-in needs no shopping profile, so it is usable at once. */
+  if (patch.roles && patch.roles.length === 1 && patch.roles[0] === "approver") patch.active = true;
   const p = await store.updateProfile(req.params.id, patch);
   res.json(pub(p));
 }));
@@ -1100,7 +1202,7 @@ app.get("/api/masters", requireAuth("admin", "approver", "store"), wrap(async (r
 }));
 
 /* Generic master create/update + delete — "Creation of other all Masters & Control". */
-const MASTER_KINDS = ["customers", "contracts", "departments", "locations", "divisions", "stores", "groups", "categories", "uoms", "items", "priceLists"];
+const MASTER_KINDS = ["customers", "employees", "contracts", "departments", "locations", "divisions", "stores", "groups", "categories", "uoms", "items", "priceLists"];
 app.post("/api/admin/masters/:kind", requireAuth("admin"), wrap(async (req, res) => {
   const kind = req.params.kind;
   if (!MASTER_KINDS.includes(kind)) return res.status(400).json({ error: `Unknown master '${kind}'` });
@@ -1119,6 +1221,20 @@ app.post("/api/admin/masters/:kind", requireAuth("admin"), wrap(async (req, res)
       l.restricted = l.restricted !== false;
       l.uom = l.uom || (m.items.find(i => i.code === l.codes[0]) || {}).uom || "PCS";
     }
+  }
+  /* Employee Master — the register-ability list. Registration matches an
+     Employee ID against it and then checks the Mobile Phone, so both are
+     mandatory here. */
+  if (kind === "employees") {
+    body.empId = String(body.empId || "").trim();
+    if (!body.empId) return res.status(400).json({ error: "Employee ID is required" });
+    body.phone = String(body.phone || "").trim();
+    if (!body.phone) return res.status(400).json({ error: "Mobile Phone is required — registration validates it against this master" });
+    if (!String(body.name || "").trim()) return res.status(400).json({ error: "Employee Name is required" });
+    if (body.customer && !m.customers.find(c => c.id === body.customer))
+      return res.status(400).json({ error: `Unknown customer ${body.customer}` });
+    const clash = (m.employees || []).find(e => e.empId !== body.empId && String(e.phone || "").replace(/\D/g, "") === body.phone.replace(/\D/g, ""));
+    if (clash) return res.status(400).json({ error: `That Mobile Phone already belongs to ${clash.empId} — the two data points must identify one employee` });
   }
   if (kind === "stores" && body.type && !["main", "reservation"].includes(body.type))
     return res.status(400).json({ error: "store type must be main|reservation" });

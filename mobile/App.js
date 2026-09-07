@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View } from "react-native";
+import { Alert, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -32,8 +32,36 @@ const tabOpts = icon => ({
   headerTitleStyle: { fontWeight: "700" }
 });
 
+/* SRS2 (Sept-26): one log-in can hold the Employee and the Approver role and
+   switch between the two modules. The bar only appears when it holds both. */
+const MODULE = { employee: "Employee", approver: "Approver", store: "Store", admin: "Admin" };
+function ModuleBar() {
+  const { user, switchRole } = useStore();
+  const roles = (user && user.roles) || [];
+  if (roles.length < 2) return null;
+  return (
+    <View style={{ flexDirection: "row", backgroundColor: C.navy, paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
+      <Text style={{ color: "#a9c3da", fontSize: 11, fontWeight: "700", alignSelf: "center" }}>MODULE</Text>
+      {roles.map(r => {
+        const on = r === user.role;
+        return (
+          <Text key={r}
+            onPress={() => { if (!on) switchRole(r).catch(e => Alert.alert("Switch module", e.message)); }}
+            style={{
+              color: on ? "#fff" : "#a9c3da", fontSize: 12, fontWeight: "700",
+              backgroundColor: on ? C.orange : "rgba(255,255,255,0.12)",
+              paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, overflow: "hidden"
+            }}>
+            {MODULE[r] || r}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
+
 function PendingScreen() {
-  const { user, refreshMe, logout } = useStore();
+  const { user, refreshMe, logout, switchRole } = useStore();
   return (
     <View style={{ flex: 1, backgroundColor: C.navy, justifyContent: "center", padding: 30 }}>
       <Text style={{ fontSize: 44, textAlign: "center", marginBottom: 14 }}>⏳</Text>
@@ -45,6 +73,10 @@ function PendingScreen() {
         You'll be able to shop as soon as that's done.
       </Text>
       <Btn title="Check again" onPress={refreshMe} />
+      {((user && user.roles) || []).filter(r => r !== "employee").map(r => (
+        <Btn key={r} title={`Switch to the ${MODULE[r] || r} Module`} color="#2f6fb2"
+          onPress={() => switchRole(r).catch(e => Alert.alert("Switch module", e.message))} />
+      ))}
       <Btn title="Sign out" color="#8195a8" onPress={logout} />
     </View>
   );
@@ -117,11 +149,14 @@ function Root() {
     : user.role === "store" ? StoreTabs
     : AdminTabs;
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="Main" component={Tabs} options={{ headerShown: false }} />
-      <Stack.Screen name="OrderDetail" component={OrderDetailScreen}
-        options={{ title: "Order", headerStyle: { backgroundColor: C.navy }, headerTintColor: "#fff" }} />
-    </Stack.Navigator>
+    <View style={{ flex: 1 }}>
+      <ModuleBar />
+      <Stack.Navigator>
+        <Stack.Screen name="Main" component={Tabs} options={{ headerShown: false }} />
+        <Stack.Screen name="OrderDetail" component={OrderDetailScreen}
+          options={{ title: "Order", headerStyle: { backgroundColor: C.navy }, headerTintColor: "#fff" }} />
+      </Stack.Navigator>
+    </View>
   );
 }
 

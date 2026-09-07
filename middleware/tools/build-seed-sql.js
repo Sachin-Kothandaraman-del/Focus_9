@@ -26,6 +26,7 @@ out.push("");
 
 const kinds = [
   ["customers", seed.customers, "id"],
+  ["employees", seed.employees, "empId"],
   ["contracts", seed.contracts, "ref"],
   ["departments", seed.departments, "code"],
   ["locations", seed.locations, "code"],
