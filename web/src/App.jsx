@@ -58,7 +58,16 @@ export default function App() {
     } catch (e) {}
   }
   async function refreshNotifications() {
-    try { setNotif(await api("/api/notifications")); } catch (e) {}
+    try {
+      const n = await api("/api/notifications");
+      /* Only touch state when something actually changed — otherwise the
+         30-second poll would re-render the whole app for nothing. */
+      setNotif(prev =>
+        prev.unread === n.unread &&
+        prev.notifications.length === n.notifications.length &&
+        (prev.notifications[0] || {}).id === (n.notifications[0] || {}).id
+          ? prev : n);
+    } catch (e) {}
   }
 
   /* 10-minute countdown — when it hits zero the server empties the cart and
@@ -174,7 +183,11 @@ export default function App() {
   /* Only the screens of the module the user is currently in are reachable —
      switching module (employee ⇄ approver) changes this set. */
   const allowed = new Set(links.map(([to]) => to));
-  const Only = ({ path, children }) => (allowed.has(path) ? children : <Navigate to={home} replace />);
+  /* A plain helper, NOT a component: declaring a component inside App would
+     give React a new component type on every render, so it would unmount and
+     remount the whole page (re-running its data load) each time anything in
+     the shell changed — the screen looked like it was refreshing itself. */
+  const only = (path, element) => (allowed.has(path) ? element : <Navigate to={home} replace />);
 
   return (
     <Ctx.Provider value={ctx}>
@@ -214,14 +227,14 @@ export default function App() {
         </aside>
         <main className="main">
           <Routes>
-            <Route path="/shop"      element={<Only path="/shop"><ShopPage /></Only>} />
-            <Route path="/carts"     element={<Only path="/carts"><CartsPage /></Only>} />
-            <Route path="/orders"    element={<Only path="/orders"><OrdersPage /></Only>} />
-            <Route path="/approvals" element={<Only path="/approvals"><ApprovalsPage /></Only>} />
-            <Route path="/fulfil"    element={<Only path="/fulfil"><FulfilPage /></Only>} />
-            <Route path="/inventory" element={<Only path="/inventory"><InventoryPage /></Only>} />
-            <Route path="/masters"   element={<Only path="/masters"><MastersPage /></Only>} />
-            <Route path="/users"     element={<Only path="/users"><UsersPage /></Only>} />
+            <Route path="/shop"      element={only("/shop", <ShopPage />)} />
+            <Route path="/carts"     element={only("/carts", <CartsPage />)} />
+            <Route path="/orders"    element={only("/orders", <OrdersPage />)} />
+            <Route path="/approvals" element={only("/approvals", <ApprovalsPage />)} />
+            <Route path="/fulfil"    element={only("/fulfil", <FulfilPage />)} />
+            <Route path="/inventory" element={only("/inventory", <InventoryPage />)} />
+            <Route path="/masters"   element={only("/masters", <MastersPage />)} />
+            <Route path="/users"     element={only("/users", <UsersPage />)} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to={home} replace />} />
           </Routes>
