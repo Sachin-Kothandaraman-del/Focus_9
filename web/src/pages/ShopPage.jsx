@@ -15,25 +15,25 @@ export default function ShopPage() {
   const profiles = catalog?.profiles || [];
   const profile = profiles[Math.min(plIx, profiles.length - 1)] || null;
 
+  /* Group and Category are labels carried by the item (there is no Group or
+     Category master) — the tabs are the distinct values on this price list. */
   const groups = useMemo(() => {
     if (!profile) return [];
     const seen = [];
-    for (const l of profile.lines) {
-      if (l.group && !seen.find(g => g.code === l.group.code)) seen.push(l.group);
-    }
+    for (const l of profile.lines) if (l.group && !seen.includes(l.group)) seen.push(l.group);
     return seen;
   }, [profile]);
 
   if (!catalog) return <Empty icon="⏳" text="Loading your approved price lists…" />;
   if (!profile) return <Empty icon="🛒" text="No price list is assigned to you yet — contact the PROSAFE admin." />;
 
-  const activeGroup = groups.find(g => g.code === group) || groups[0] || null;
+  const activeGroup = groups.includes(group) ? group : (groups[0] || null);
   const cats = [];
   for (const l of profile.lines) {
-    if (l.group?.code === activeGroup?.code && l.cat && !cats.find(c => c.code === l.cat.code)) cats.push(l.cat);
+    if (l.group === activeGroup && l.cat && !cats.includes(l.cat)) cats.push(l.cat);
   }
   const lines = profile.lines.filter(l =>
-    (!activeGroup || l.group?.code === activeGroup.code) && (!cat || l.cat?.code === cat));
+    (!activeGroup || l.group === activeGroup) && (!cat || l.cat === cat));
 
   const cartQtyOf = code =>
     cart.order.filter(x => x.code === code).reduce((s, x) => s + x.qty, 0) +
@@ -76,14 +76,14 @@ export default function ShopPage() {
       <ShopHeader profile={profile} />
       <div className="tabsbar">
         {groups.map(g => (
-          <button key={g.code} className={g.code === activeGroup?.code ? "on" : ""}
-            onClick={() => { setGroup(g.code); setCat(null); }}>{g.code} · {g.name}</button>
+          <button key={g} className={g === activeGroup ? "on" : ""}
+            onClick={() => { setGroup(g); setCat(null); }}>{g}</button>
         ))}
       </div>
       {cats.length > 1 && (
         <div className="tabsbar cat">
           <button className={!cat ? "on" : ""} onClick={() => setCat(null)}>All</button>
-          {cats.map(c => <button key={c.code} className={c.code === cat ? "on" : ""} onClick={() => setCat(c.code)}>{c.name}</button>)}
+          {cats.map(c => <button key={c} className={c === cat ? "on" : ""} onClick={() => setCat(c)}>{c}</button>)}
         </div>
       )}
       <div className="grid">

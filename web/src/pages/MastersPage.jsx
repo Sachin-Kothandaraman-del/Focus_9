@@ -3,13 +3,16 @@ import { api } from "../api";
 import { Chip, Empty, Modal, fmt } from "../ui.jsx";
 
 /* Admin — creation & control of all masters (SRS2):
-   Customer, Contract, Department, Location, Division, Stores, Groups,
-   Categories, UOM, Item and Price List masters. */
+   Customer, Employee, Contract, Department, Location, Division, Stores, UOM,
+   Item and Price List masters.
+   There is no Group or Category master: an item carries its own Group and
+   Category, and the shopping screen builds its tabs from those labels. The
+   two fields offer the values already in use, and accept a new one. */
 
 const KINDS = [
   ["customers", "Customers"], ["employees", "Employees"], ["contracts", "Contracts"], ["departments", "Departments"],
   ["locations", "Locations"], ["divisions", "Divisions"], ["stores", "Stores"],
-  ["groups", "Groups"], ["categories", "Categories"], ["uoms", "UOM"],
+  ["uoms", "UOM"],
   ["items", "Items"], ["priceLists", "Price Lists"]
 ];
 
@@ -37,14 +40,13 @@ const FIELDS = {
     { k: "code", l: "Code", req: true }, { k: "name", l: "Stores Name", req: true },
     { k: "division", l: "Division", sel: "divisions" }, { k: "type", l: "Type", opts: ["main", "reservation"] }
   ],
-  groups: [{ k: "code", l: "Group Code", req: true }, { k: "name", l: "Group Name", req: true }],
-  categories: [{ k: "code", l: "Category Code", req: true }, { k: "name", l: "Category Name", req: true }],
   uoms: [{ k: "code", l: "UOM", req: true }],
   items: [
     { k: "code", l: "Item Code", req: true }, { k: "name", l: "Item Name", req: true },
     { k: "desc", l: "Description" }, { k: "alias", l: "Alias Description" },
-    { k: "uom", l: "UOM", sel: "uoms" }, { k: "group", l: "Group", sel: "groups" },
-    { k: "cat", l: "Category", sel: "categories" }, { k: "pic", l: "Icon (emoji)" }
+    { k: "uom", l: "UOM", sel: "uoms" },
+    { k: "group", l: "Group", list: "group" }, { k: "cat", l: "Category", list: "cat" },
+    { k: "pic", l: "Icon (emoji)" }
   ]
 };
 
@@ -89,12 +91,14 @@ export default function MastersPage() {
     const opt = f.sel && selOptions(f.sel).find(([code]) => code === v);
     return opt ? `${opt[0]} — ${opt[1]}` : String(v);
   };
+  /* Suggestions for the item's Group / Category — the labels already in use on
+     other items, so they stay consistent without a master to maintain. */
+  const itemLabels = field => [...new Set((m.items || []).map(i => i[field]).filter(Boolean))].sort();
+
   const selOptions = src =>
     src === "customers" ? m.customers.map(c => [c.id, c.name])
     : src === "divisions" ? m.divisions.map(d => [d.code, d.name])
     : src === "uoms" ? m.uoms.map(u => [u, u])
-    : src === "groups" ? m.groups.map(g => [g.code, g.name])
-    : src === "categories" ? m.categories.map(c => [c.code, c.name])
     : src === "departments" ? m.departments.map(d => [d.code, d.name])
     : src === "locations" ? m.locations.map(l => [l.code, l.name])
     : [];
@@ -179,7 +183,16 @@ export default function MastersPage() {
             {fields.map(f => (
               <div key={f.k}>
                 <label className="f">{f.l}{f.req ? " *" : ""}</label>
-                {f.sel
+                {f.list
+                  ? <>
+                      <input list={`dl-${f.k}`} value={edit[f.k] ?? ""}
+                        onChange={e => setEdit({ ...edit, [f.k]: e.target.value })}
+                        placeholder="pick one, or type a new one" />
+                      <datalist id={`dl-${f.k}`}>
+                        {itemLabels(f.list).map(v => <option key={v} value={v} />)}
+                      </datalist>
+                    </>
+                  : f.sel
                   ? <select value={edit[f.k] || ""} onChange={e => setEdit({ ...edit, [f.k]: e.target.value })}>
                       <option value="">—</option>
                       {selOptions(f.sel).map(([v, l]) => <option key={v} value={v}>{v} — {l}</option>)}

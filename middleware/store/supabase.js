@@ -33,7 +33,7 @@ const fromPatch = p => {
   for (const [k, v] of Object.entries(p)) m[map[k] || k] = v;
   return m;
 };
-const MASTER_ORDER = ["customers", "employees", "contracts", "departments", "locations", "divisions", "stores", "groups", "categories", "uoms", "items", "priceLists"];
+const MASTER_ORDER = ["customers", "employees", "contracts", "departments", "locations", "divisions", "stores", "uoms", "items", "priceLists"];
 const masterKey = kind =>
   kind === "customers" || kind === "priceLists" ? "id"
   : kind === "contracts" ? "ref"

@@ -20,14 +20,16 @@ export default function ShopScreen() {
   const profile = profiles[Math.min(plIx, profiles.length - 1)];
   if (!profile) return <Empty icon="🛒" text="No price list is assigned to you yet — contact the PROSAFE admin." />;
 
+  /* Group and Category are labels on the item — there is no Group or Category
+     master; the tabs are the distinct values on this price list. */
   const groups = [];
-  for (const l of profile.lines) if (l.group && !groups.find(g => g.code === l.group.code)) groups.push(l.group);
-  const activeGroup = groups.find(g => g.code === group) || groups[0] || null;
+  for (const l of profile.lines) if (l.group && !groups.includes(l.group)) groups.push(l.group);
+  const activeGroup = groups.includes(group) ? group : (groups[0] || null);
   const cats = [];
   for (const l of profile.lines)
-    if (l.group?.code === activeGroup?.code && l.cat && !cats.find(c => c.code === l.cat.code)) cats.push(l.cat);
+    if (l.group === activeGroup && l.cat && !cats.includes(l.cat)) cats.push(l.cat);
   const lines = profile.lines.filter(l =>
-    (!activeGroup || l.group?.code === activeGroup.code) && (!cat || l.cat?.code === cat));
+    (!activeGroup || l.group === activeGroup) && (!cat || l.cat === cat));
 
   const cartQtyOf = code =>
     cart.order.filter(x => x.code === code).reduce((s, x) => s + x.qty, 0) +
@@ -87,9 +89,9 @@ export default function ShopScreen() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
         {groups.map(g => (
-          <TouchableOpacity key={g.code} onPress={() => { setGroup(g.code); setCat(null); }}
-            style={[s.tab, activeGroup?.code === g.code && { backgroundColor: C.navy }]}>
-            <Text style={[s.tabTxt, activeGroup?.code === g.code && { color: "#fff" }]}>{g.name}</Text>
+          <TouchableOpacity key={g} onPress={() => { setGroup(g); setCat(null); }}
+            style={[s.tab, activeGroup === g && { backgroundColor: C.navy }]}>
+            <Text style={[s.tabTxt, activeGroup === g && { color: "#fff" }]}>{g}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -99,8 +101,8 @@ export default function ShopScreen() {
             <Text style={[s.tabTxt, !cat && { color: "#fff" }]}>All</Text>
           </TouchableOpacity>
           {cats.map(ct => (
-            <TouchableOpacity key={ct.code} onPress={() => setCat(ct.code)} style={[s.tab, cat === ct.code && { backgroundColor: C.orange }]}>
-              <Text style={[s.tabTxt, cat === ct.code && { color: "#fff" }]}>{ct.name}</Text>
+            <TouchableOpacity key={ct} onPress={() => setCat(ct)} style={[s.tab, cat === ct && { backgroundColor: C.orange }]}>
+              <Text style={[s.tabTxt, cat === ct && { color: "#fff" }]}>{ct}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>

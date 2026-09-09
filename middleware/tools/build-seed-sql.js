@@ -32,12 +32,16 @@ const kinds = [
   ["locations", seed.locations, "code"],
   ["divisions", seed.divisions, "code"],
   ["stores", seed.stores, "code"],
-  ["groups", seed.groups, "code"],
-  ["categories", seed.categories, "code"],
   ["items", seed.items, "code"],
   ["priceLists", seed.priceLists, "id"]
 ];
 
+/* The Group and Category masters were removed (Sept-26): the grouping now
+   lives on the item itself, so clear the old rows from an existing database. */
+out.push("-- the Group and Category masters were removed — the item carries the");
+out.push("-- grouping now, so drop any rows left over from an earlier setup");
+out.push("delete from masters where kind in ('groups', 'categories');");
+out.push("");
 out.push("-- masters");
 for (const [kind, list, key] of kinds)
   for (const rec of list)

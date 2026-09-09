@@ -14,52 +14,55 @@
    ./item-images.js and are merged in by the middleware when it serves the
    catalog. That keeps the master data (and supabase/seed.sql) small. */
 
+/* Group and Category are held on the item itself — there is no separate Group
+   or Category master. The shopping screen builds its tabs from the distinct
+   values found on the items of the employee's price list. */
 const items = [
   // ---- Head Protection ----
-  { code: "HPHTPE0001", name: "Hart Hat, Green",                                   uom: "PCS", group: "HP", cat: "HT", pic: "⛑️" },
-  { code: "HPHTPE0002", name: "Hart Hat, Red",                                     uom: "PCS", group: "HP", cat: "HT", pic: "⛑️" },
-  { code: "HPHTPE0003", name: "Hart Hat, Blue",                                    uom: "PCS", group: "HP", cat: "HT", pic: "⛑️" },
+  { code: "HPHTPE0001", name: "Hart Hat, Green",                                   uom: "PCS", group: "Head Protection",        cat: "Hard Hat",        pic: "⛑️" },
+  { code: "HPHTPE0002", name: "Hart Hat, Red",                                     uom: "PCS", group: "Head Protection",        cat: "Hard Hat",        pic: "⛑️" },
+  { code: "HPHTPE0003", name: "Hart Hat, Blue",                                    uom: "PCS", group: "Head Protection",        cat: "Hard Hat",        pic: "⛑️" },
   // ---- Eye & Face ----
-  { code: "EFSPPC0001", name: "Safety Spectacle, Clear",                           uom: "PCS", group: "EF", cat: "SP", pic: "🥽" },
-  { code: "EFSPPC0002", name: "Safety Spectacle, Grey",                            uom: "PCS", group: "EF", cat: "SP", pic: "🥽" },
-  { code: "EFGGNY0001", name: "Impact Goggle",                                     uom: "PCS", group: "EF", cat: "GG", pic: "🥽" },
+  { code: "EFSPPC0001", name: "Safety Spectacle, Clear",                           uom: "PCS", group: "Eye & Face Protection",  cat: "Spectacle",       pic: "🥽" },
+  { code: "EFSPPC0002", name: "Safety Spectacle, Grey",                            uom: "PCS", group: "Eye & Face Protection",  cat: "Spectacle",       pic: "🥽" },
+  { code: "EFGGNY0001", name: "Impact Goggle",                                     uom: "PCS", group: "Eye & Face Protection",  cat: "Goggle",          pic: "🥽" },
   // ---- Respiratory ----
-  { code: "RPDM950001", name: "N95 Dust Mask, 20 pcs/pkt",                         uom: "PKT", group: "RP", cat: "DM", pic: "😷" },
+  { code: "RPDM950001", name: "N95 Dust Mask, 20 pcs/pkt",                         uom: "PKT", group: "Respiratory Protection", cat: "Dust Mask",       pic: "😷" },
   // ---- Protective Clothing ----
-  { code: "PCCVCT0001", name: "100% Cotton Coverall, Royal Blue, Size - Medium",   uom: "PCS", group: "PC", cat: "CV", pic: "🦺" },
-  { code: "PCCVCT0002", name: "100% Cotton Coverall, Royal Blue, Size - Large",    uom: "PCS", group: "PC", cat: "CV", pic: "🦺" },
-  { code: "PCCVCT0003", name: "100% Cotton Coverall, Royal Blue, Size - X Large",  uom: "PCS", group: "PC", cat: "CV", pic: "🦺" },
-  { code: "PCSHHM0001", name: "Hot Metal Shirt, Medium Blue, Size - Medium",       uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
-  { code: "PCSHHM0002", name: "Hot Metal Shirt, Medium Blue, Size - Large",        uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
-  { code: "PCSHHM0003", name: "Hot Metal Shirt, Medium Blue, Size - X Large",      uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
-  { code: "PCSHCT0001", name: "Poly Cotton Work Shirt, Khaki, Size - Medium",      uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
-  { code: "PCSHCT0002", name: "Poly Cotton Work Shirt, Khaki, Size - Large",       uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
-  { code: "PCSHCT0003", name: "Poly Cotton Work Shirt, Khaki, Size - X Large",     uom: "PCS", group: "PC", cat: "ST", pic: "👕" },
-  { code: "PCTRHM0001", name: "Hot Metal Trouser, Grey, Size - 30",         uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
-  { code: "PCTRHM0002", name: "Hot Metal Trouser, Grey, Size - 32",         uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
-  { code: "PCTRHM0003", name: "Hot Metal Trouser, Grey, Size - 34",         uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
-  { code: "PCTRHM0004", name: "Hot Metal Trouser, Grey, Size - 36",         uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
-  { code: "PCTRCT0001", name: "Poly Cotton Work Trouser, Navy Blue, Size - 30",    uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
-  { code: "PCTRCT0002", name: "Poly Cotton Work Trouser, Navy Blue, Size - 32",    uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
-  { code: "PCTRCT0003", name: "Poly Cotton Work Trouser, Navy Blue, Size - 34",    uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
-  { code: "PCTRCT0004", name: "Poly Cotton Work Trouser, Navy Blue, Size - 36",    uom: "PCS", group: "PC", cat: "TR", pic: "👖" },
-  { code: "PCVSPE0001", name: "Hi-Viz Vest, Yellow, Size - Medium",                uom: "PRS", group: "PC", cat: "VS", pic: "🦺" },
-  { code: "PCVSPE0002", name: "Hi-Viz Vest, Yellow, Size - Large",                 uom: "PRS", group: "PC", cat: "VS", pic: "🦺" },
-  { code: "PCVSPE0003", name: "Hi-Viz Vest, Yellow, Size - X Large",               uom: "PRS", group: "PC", cat: "VS", pic: "🦺" },
+  { code: "PCCVCT0001", name: "100% Cotton Coverall, Royal Blue, Size - Medium",   uom: "PCS", group: "Protective Clothing",    cat: "Coverall",        pic: "🦺" },
+  { code: "PCCVCT0002", name: "100% Cotton Coverall, Royal Blue, Size - Large",    uom: "PCS", group: "Protective Clothing",    cat: "Coverall",        pic: "🦺" },
+  { code: "PCCVCT0003", name: "100% Cotton Coverall, Royal Blue, Size - X Large",  uom: "PCS", group: "Protective Clothing",    cat: "Coverall",        pic: "🦺" },
+  { code: "PCSHHM0001", name: "Hot Metal Shirt, Medium Blue, Size - Medium",       uom: "PCS", group: "Protective Clothing",    cat: "Shirt",           pic: "👕" },
+  { code: "PCSHHM0002", name: "Hot Metal Shirt, Medium Blue, Size - Large",        uom: "PCS", group: "Protective Clothing",    cat: "Shirt",           pic: "👕" },
+  { code: "PCSHHM0003", name: "Hot Metal Shirt, Medium Blue, Size - X Large",      uom: "PCS", group: "Protective Clothing",    cat: "Shirt",           pic: "👕" },
+  { code: "PCSHCT0001", name: "Poly Cotton Work Shirt, Khaki, Size - Medium",      uom: "PCS", group: "Protective Clothing",    cat: "Shirt",           pic: "👕" },
+  { code: "PCSHCT0002", name: "Poly Cotton Work Shirt, Khaki, Size - Large",       uom: "PCS", group: "Protective Clothing",    cat: "Shirt",           pic: "👕" },
+  { code: "PCSHCT0003", name: "Poly Cotton Work Shirt, Khaki, Size - X Large",     uom: "PCS", group: "Protective Clothing",    cat: "Shirt",           pic: "👕" },
+  { code: "PCTRHM0001", name: "Hot Metal Trouser, Grey, Size - 30",         uom: "PCS", group: "Protective Clothing",    cat: "Trouser",         pic: "👖" },
+  { code: "PCTRHM0002", name: "Hot Metal Trouser, Grey, Size - 32",         uom: "PCS", group: "Protective Clothing",    cat: "Trouser",         pic: "👖" },
+  { code: "PCTRHM0003", name: "Hot Metal Trouser, Grey, Size - 34",         uom: "PCS", group: "Protective Clothing",    cat: "Trouser",         pic: "👖" },
+  { code: "PCTRHM0004", name: "Hot Metal Trouser, Grey, Size - 36",         uom: "PCS", group: "Protective Clothing",    cat: "Trouser",         pic: "👖" },
+  { code: "PCTRCT0001", name: "Poly Cotton Work Trouser, Navy Blue, Size - 30",    uom: "PCS", group: "Protective Clothing",    cat: "Trouser",         pic: "👖" },
+  { code: "PCTRCT0002", name: "Poly Cotton Work Trouser, Navy Blue, Size - 32",    uom: "PCS", group: "Protective Clothing",    cat: "Trouser",         pic: "👖" },
+  { code: "PCTRCT0003", name: "Poly Cotton Work Trouser, Navy Blue, Size - 34",    uom: "PCS", group: "Protective Clothing",    cat: "Trouser",         pic: "👖" },
+  { code: "PCTRCT0004", name: "Poly Cotton Work Trouser, Navy Blue, Size - 36",    uom: "PCS", group: "Protective Clothing",    cat: "Trouser",         pic: "👖" },
+  { code: "PCVSPE0001", name: "Hi-Viz Vest, Yellow, Size - Medium",                uom: "PRS", group: "Protective Clothing",    cat: "Vest",            pic: "🦺" },
+  { code: "PCVSPE0002", name: "Hi-Viz Vest, Yellow, Size - Large",                 uom: "PRS", group: "Protective Clothing",    cat: "Vest",            pic: "🦺" },
+  { code: "PCVSPE0003", name: "Hi-Viz Vest, Yellow, Size - X Large",               uom: "PRS", group: "Protective Clothing",    cat: "Vest",            pic: "🦺" },
   // ---- Gloves ----
-  { code: "GLHMCT0001", name: "Heat Resistant Gloves",                             uom: "PRS", group: "GL", cat: "HR", pic: "🧤" },
-  { code: "GLGPCT0001", name: "General Purpose Gloves, 12 prs/dp",                 uom: "DP",  group: "GL", cat: "GP", pic: "🧤" },
+  { code: "GLHMCT0001", name: "Heat Resistant Gloves",                             uom: "PRS", group: "Gloves",                 cat: "Heat Resistant",  pic: "🧤" },
+  { code: "GLGPCT0001", name: "General Purpose Gloves, 12 prs/dp",                 uom: "DP",  group: "Gloves",                 cat: "General Purpose", pic: "🧤" },
   // ---- Foot Wear ----
-  { code: "FWHMBT0001", name: "Hot Metal Boots, Black, Size - 40",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
-  { code: "FWHMBT0002", name: "Hot Metal Boots, Black, Size - 41",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
-  { code: "FWHMBT0003", name: "Hot Metal Boots, Black, Size - 42",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
-  { code: "FWHMBT0004", name: "Hot Metal Boots, Black, Size - 43",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
-  { code: "FWHMBT0005", name: "Hot Metal Boots, Black, Size - 44",                 uom: "PRS", group: "FW", cat: "HM", pic: "🥾" },
-  { code: "FEGPBT0001", name: "General Purpose Safety Boots, Brown, Size - 40",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
-  { code: "FEGPBT0002", name: "General Purpose Safety Boots, Brown, Size - 41",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
-  { code: "FEGPBT0003", name: "General Purpose Safety Boots, Brown, Size - 42",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
-  { code: "FEGPBT0004", name: "General Purpose Safety Boots, Brown, Size - 43",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" },
-  { code: "FEGPBT0005", name: "General Purpose Safety Boots, Brown, Size - 44",    uom: "PRS", group: "FW", cat: "GP", pic: "🥾" }
+  { code: "FWHMBT0001", name: "Hot Metal Boots, Black, Size - 40",                 uom: "PRS", group: "Foot Wear",              cat: "Hot Metal",       pic: "🥾" },
+  { code: "FWHMBT0002", name: "Hot Metal Boots, Black, Size - 41",                 uom: "PRS", group: "Foot Wear",              cat: "Hot Metal",       pic: "🥾" },
+  { code: "FWHMBT0003", name: "Hot Metal Boots, Black, Size - 42",                 uom: "PRS", group: "Foot Wear",              cat: "Hot Metal",       pic: "🥾" },
+  { code: "FWHMBT0004", name: "Hot Metal Boots, Black, Size - 43",                 uom: "PRS", group: "Foot Wear",              cat: "Hot Metal",       pic: "🥾" },
+  { code: "FWHMBT0005", name: "Hot Metal Boots, Black, Size - 44",                 uom: "PRS", group: "Foot Wear",              cat: "Hot Metal",       pic: "🥾" },
+  { code: "FEGPBT0001", name: "General Purpose Safety Boots, Brown, Size - 40",    uom: "PRS", group: "Foot Wear",              cat: "General Purpose", pic: "🥾" },
+  { code: "FEGPBT0002", name: "General Purpose Safety Boots, Brown, Size - 41",    uom: "PRS", group: "Foot Wear",              cat: "General Purpose", pic: "🥾" },
+  { code: "FEGPBT0003", name: "General Purpose Safety Boots, Brown, Size - 42",    uom: "PRS", group: "Foot Wear",              cat: "General Purpose", pic: "🥾" },
+  { code: "FEGPBT0004", name: "General Purpose Safety Boots, Brown, Size - 43",    uom: "PRS", group: "Foot Wear",              cat: "General Purpose", pic: "🥾" },
+  { code: "FEGPBT0005", name: "General Purpose Safety Boots, Brown, Size - 44",    uom: "PRS", group: "Foot Wear",              cat: "General Purpose", pic: "🥾" }
 ].map(i => ({ desc: i.name, alias: i.name, ...i }));
 
 /* EGA Main Store opening stock — "Store Inventory List Main Stores.xls" */
@@ -129,24 +132,6 @@ module.exports = {
     { code: "EGAMS", name: "EGA Main Store",           division: "PSSEGA", type: "main" },
     { code: "EGADR", name: "Dubal Reservation Store",  division: "PSSEGA", type: "reservation" },
     { code: "EGAER", name: "Emal Reservation Store",   division: "PSSEGA", type: "reservation" }
-  ],
-
-  groups: [
-    { code: "HP", name: "Head Protection" },
-    { code: "EF", name: "Eye & Face Protection" },
-    { code: "RP", name: "Respiratory Protection" },
-    { code: "PC", name: "Protective Clothing" },
-    { code: "GL", name: "Gloves" },
-    { code: "FW", name: "Foot Wear" }
-  ],
-
-  categories: [
-    { code: "HT", name: "Hard Hat" },       { code: "SP", name: "Spectacle" },
-    { code: "GG", name: "Goggle" },         { code: "DM", name: "Dust Mask" },
-    { code: "CV", name: "Coverall" },       { code: "ST", name: "Shirt" },
-    { code: "TR", name: "Trouser" },        { code: "VS", name: "Vest" },
-    { code: "HR", name: "Heat Resistant" }, { code: "GP", name: "General Purpose" },
-    { code: "HM", name: "Hot Metal" }
   ],
 
   uoms: ["PCS", "PKT", "PRS", "DOZ", "DP"],

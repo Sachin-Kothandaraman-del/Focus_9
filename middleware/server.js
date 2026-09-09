@@ -425,8 +425,10 @@ app.get("/api/catalog", requireAuth("employee"), wrap(async (req, res) => {
         key: l.key, sl: l.sl, uom: l.uom, price: l.price, restricted: l.restricted,
         allocated: l.allocated, used: l.used, balance: l.balance,
         allocatedAmount: l.allocatedAmount, usedAmount: l.usedAmount,
-        group: m.groups.find(g => g.code === (m.items.find(i => i.code === l.codes[0]) || {}).group) || null,
-        cat: m.categories.find(c => c.code === (m.items.find(i => i.code === l.codes[0]) || {}).cat) || null,
+        /* Group and Category come straight off the item — there is no Group or
+           Category master; the shopping screen groups by these labels. */
+        group: (m.items.find(i => i.code === l.codes[0]) || {}).group || null,
+        cat: (m.items.find(i => i.code === l.codes[0]) || {}).cat || null,
         items: l.codes.map(c => {
           const i = m.items.find(x => x.code === c) || { code: c, name: c, uom: l.uom, pic: "📦" };
           return { code: i.code, name: i.name, uom: i.uom, pic: i.pic, img: imgOf(i), stock: stockOf(c) };
@@ -1202,7 +1204,7 @@ app.get("/api/masters", requireAuth("admin", "approver", "store"), wrap(async (r
 }));
 
 /* Generic master create/update + delete — "Creation of other all Masters & Control". */
-const MASTER_KINDS = ["customers", "employees", "contracts", "departments", "locations", "divisions", "stores", "groups", "categories", "uoms", "items", "priceLists"];
+const MASTER_KINDS = ["customers", "employees", "contracts", "departments", "locations", "divisions", "stores", "uoms", "items", "priceLists"];
 app.post("/api/admin/masters/:kind", requireAuth("admin"), wrap(async (req, res) => {
   const kind = req.params.kind;
   if (!MASTER_KINDS.includes(kind)) return res.status(400).json({ error: `Unknown master '${kind}'` });

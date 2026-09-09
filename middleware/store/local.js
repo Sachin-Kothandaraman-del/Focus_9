@@ -5,7 +5,7 @@ const seed = require("./seed-data");
 
 const DATA_DIR = path.join(__dirname, "..", "data");
 const DATA_FILE = path.join(DATA_DIR, "db.json");
-const DB_VERSION = 6; // SRS2 model + item photos + "store" role + Employee Master & multi-role
+const DB_VERSION = 7; // + Employee Master, multi-role, Group/Category held on the item
 let db = null;
 
 const clone = x => JSON.parse(JSON.stringify(x));
@@ -24,7 +24,7 @@ function freshDb() {
     masters: clone({
       customers: seed.customers, employees: seed.employees, contracts: seed.contracts, departments: seed.departments,
       locations: seed.locations, divisions: seed.divisions, stores: seed.stores,
-      groups: seed.groups, categories: seed.categories, uoms: seed.uoms,
+      uoms: seed.uoms,
       items: seed.items, priceLists: seed.priceLists
     }),
     inventory: clone(seed.inventory),   // inventory[storeCode][itemCode] = qty
