@@ -169,20 +169,6 @@ export default function UsersPage() {
               <div style={{ flex: 1 }}><label className="f">Mobile Phone</label><input maxLength={15} value={add.phone} onChange={e => setAdd({ ...add, phone: e.target.value })} /></div>
               <div style={{ flex: 1 }}><label className="f">Telephone</label><input maxLength={15} value={add.telephone} onChange={e => setAdd({ ...add, telephone: e.target.value })} /></div>
             </div>
-            {add.role === "store" && (
-              <div className="row">
-                <div><label className="f">Main Store</label>
-                  <select value={add.fromStore} onChange={e => setAdd({ ...add, fromStore: e.target.value })}>
-                    <option value="">—</option>
-                    {mainStores.map(s => <option key={s.code} value={s.code}>{s.code} — {s.name}</option>)}
-                  </select></div>
-                <div><label className="f">Reservation Store</label>
-                  <select value={add.toStore} onChange={e => setAdd({ ...add, toStore: e.target.value })}>
-                    <option value="">—</option>
-                    {resStores.map(s => <option key={s.code} value={s.code}>{s.code} — {s.name}</option>)}
-                  </select></div>
-              </div>
-            )}
           </div>
           <div className="row">
             <button className="btn ghost" onClick={() => setAdd(null)}>Cancel</button>
@@ -194,7 +180,7 @@ export default function UsersPage() {
 
       {edit && (
         <Modal onClose={() => setEdit(null)}>
-          <h1>Shopping profile — {edit.name}</h1>
+          <h1>{isStaffLogin ? "Log-in details" : "Shopping profile"} — {edit.name}</h1>
           <div className="card">
             <label className="f">Role/s — Employee, Approver, or both</label>
             <div className="row">
@@ -205,7 +191,7 @@ export default function UsersPage() {
                   {MODULE[r]}
                 </label>
               ))}
-              {isStaffLogin && <span className="sm mut">This is a {edit.roles.join(" / ")} log-in — those modules are held on their own.</span>}
+              {isStaffLogin && <span className="sm mut">This is a {edit.roles.join(" / ")} log-in — that module is held on its own, and needs no shopping profile: no Employee Master record, customer, department, location or stores.</span>}
             </div>
             {edit.roles.length > 1 && (
               <div className="sm mut" style={{ marginTop: 4 }}>
@@ -228,7 +214,9 @@ export default function UsersPage() {
             )}
 
             <div className="row">
-              <div><label className="f">Employee ID</label><input style={{ width: 120 }} maxLength={15} value={edit.empId || ""} onChange={e => setEdit({ ...edit, empId: e.target.value })} /></div>
+              {!isStaffLogin && (
+                <div><label className="f">Employee ID</label><input style={{ width: 120 }} maxLength={15} value={edit.empId || ""} onChange={e => setEdit({ ...edit, empId: e.target.value })} /></div>
+              )}
               <div><label className="f">Name</label><input maxLength={30} value={edit.name || ""} onChange={e => setEdit({ ...edit, name: e.target.value })} /></div>
               <div><label className="f">User Name</label><input style={{ width: 110 }} maxLength={8} value={edit.username || ""} onChange={e => setEdit({ ...edit, username: e.target.value })} /></div>
             </div>
@@ -237,6 +225,10 @@ export default function UsersPage() {
               <div><label className="f">Telephone</label><input maxLength={15} value={edit.telephone || ""} onChange={e => setEdit({ ...edit, telephone: e.target.value })} /></div>
               <div><label className="f">E-mail</label><input value={edit.email || ""} readOnly disabled /></div>
             </div>
+            {/* Customer, department, location and the From/To stores are the
+                shopping profile — the Store and Admin modules never read them. */}
+            {!isStaffLogin && (
+            <>
             <div className="row">
               <div><label className="f">Customer</label>
                 <select value={edit.customer || ""} onChange={e => setEdit({ ...edit, customer: e.target.value || null })}>
@@ -266,6 +258,8 @@ export default function UsersPage() {
                   {resStores.map(s => <option key={s.code} value={s.code}>{s.code} — {s.name}</option>)}
                 </select></div>
             </div>
+            </>
+            )}
 
             {edit.roles.includes("employee") && (
               <>
