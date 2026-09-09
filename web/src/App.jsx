@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import { api, setSession, hasSession } from "./api";
+import LOGO from "./logo";
 
 import AuthPage from "./pages/AuthPage.jsx";
 import ShopPage from "./pages/ShopPage.jsx";
@@ -194,7 +195,7 @@ export default function App() {
       <div className="shell">
         <aside className="side">
           <div>
-            <div className="logo">PRO<span>SAFE</span></div>
+            <div className="brandcard"><img className="brandlogo" src={LOGO} alt="Prosafe Systems" /></div>
             <div className="who">{user.name}<br />{user.empId} · {user.role}</div>
             {(user.roles || []).length > 1 && (
               <div className="roleswitch">

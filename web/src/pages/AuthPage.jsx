@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { api, setSession } from "../api";
 import { useApp } from "../App.jsx";
+import LOGO from "../logo";
 
 /* Registration per SRS2 (Sept-26):
    the employee types the two data points that are checked against the
@@ -95,7 +96,7 @@ export default function AuthPage() {
   return (
     <div className="authwrap">
       <div className="authbox" style={{ maxWidth: mode === "signup" ? 520 : 420 }}>
-        <div className="logo">PRO<span>SAFE</span></div>
+        <div className="brandcard"><img className="brandlogo" src={LOGO} alt="Prosafe Systems" /></div>
         <div className="sub">EGA End-to-End Distribution · Ordering Portal</div>
 
         <form className="authform" onSubmit={mode === "login" ? submitLogin : (emp ? submitSignup : validateEmployee)}>

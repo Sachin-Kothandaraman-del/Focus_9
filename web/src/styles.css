@@ -9,6 +9,11 @@ body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: va
 /* layout */
 .shell { display: flex; min-height: 100vh; }
 .side { width: 230px; background: linear-gradient(170deg, var(--navy), var(--navy2)); color: #fff; padding: 20px 14px; flex-shrink: 0; }
+/* Company logo. The artwork is flat colour on white, so on the dark navy
+   surfaces it sits on a white card rather than being knocked out. */
+.brandlogo { display: block; width: 100%; height: auto; }
+.brandcard { background: #fff; border-radius: 10px; padding: 9px 12px; }
+.side .brandcard { width: 168px; padding: 8px 10px; margin-bottom: 12px; }
 .side .logo { font-size: 1.5rem; font-weight: 800; letter-spacing: .5px; margin-bottom: 4px; }
 .side .logo span { color: var(--orange); }
 .side .who { font-size: .74rem; color: #a9c3da; margin-bottom: 22px; line-height: 1.5; }
@@ -74,9 +79,10 @@ label.f { display: block; font-size: .7rem; font-weight: 700; color: var(--mut);
 /* auth */
 .authwrap { min-height: 100vh; background: linear-gradient(160deg, var(--navy) 0%, #1b4066 60%, #245080 100%); display: flex; align-items: center; justify-content: center; padding: 24px; }
 .authbox { width: 100%; max-width: 420px; }
+.authbox .brandcard { max-width: 250px; margin: 0 auto 4px; padding: 13px 17px; }
 .authbox .logo { color: #fff; font-size: 2.4rem; font-weight: 800; }
 .authbox .logo span { color: var(--orange); }
-.authbox .sub { color: #a9c3da; font-size: .85rem; margin: 4px 0 20px; }
+.authbox .sub { color: #a9c3da; font-size: .85rem; margin: 10px 0 20px; text-align: center; }
 .authform { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 22px; }
 .authform input { width: 100%; background: rgba(255,255,255,.12); border: none; color: #fff; margin-bottom: 4px; }
 .authform label.f { color: #a9c3da; }
@@ -90,6 +96,7 @@ label.f { display: block; font-size: .7rem; font-weight: 700; color: var(--mut);
   .shell { flex-direction: column; }
   .side { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
   .side .who { margin: 0; }
+  .side .brandcard { width: 150px; flex-shrink: 0; margin-bottom: 0; }
   .side nav { display: flex; gap: 4px; flex-wrap: wrap; }
   .main { padding: 16px; }
 }

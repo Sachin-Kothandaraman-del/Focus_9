@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, Alert, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, Alert, TouchableOpacity, ScrollView, Image } from "react-native";
 import { useStore } from "../store";
 import { Btn } from "../components";
 import { C } from "../theme";
+import LOGO from "../logo";
 
 /* Registration per SRS2 (Sept-26): the employee gives the two data points
    checked against the Employee Master — Employee ID and Mobile Phone — and
@@ -95,7 +96,9 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView style={s.wrap} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}>
-        <Text style={s.logo}>PRO<Text style={{ color: C.orange }}>SAFE</Text></Text>
+        <View style={s.brandcard}>
+          <Image source={{ uri: LOGO }} style={s.logoimg} resizeMode="contain" />
+        </View>
         <Text style={s.sub}>EGA End-to-End Distribution{"\n"}Employee Ordering App</Text>
         <View style={s.form}>
           <View style={s.tabs}>
@@ -164,8 +167,11 @@ export default function LoginScreen() {
 
 const s = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: C.navy, padding: 28 },
-  logo: { color: "#fff", fontSize: 40, fontWeight: "800", letterSpacing: 1 },
-  sub: { color: "#a9c3da", marginTop: 6, marginBottom: 26, lineHeight: 20 },
+  /* The logo artwork is flat colour on white, so on the navy background it
+     sits on a white card rather than being knocked out. */
+  brandcard: { backgroundColor: "#fff", borderRadius: 12, padding: 12, alignSelf: "center", width: 230 },
+  logoimg: { width: "100%", height: 152 },
+  sub: { color: "#a9c3da", marginTop: 12, marginBottom: 26, lineHeight: 20, textAlign: "center" },
   form: { backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 16, padding: 18 },
   tabs: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 10, padding: 3, marginBottom: 6 },
   tabBtn: { flex: 1, paddingVertical: 9, borderRadius: 8, alignItems: "center" },
