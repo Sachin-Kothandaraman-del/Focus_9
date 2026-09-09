@@ -182,17 +182,33 @@ export default function UsersPage() {
         <Modal onClose={() => setEdit(null)}>
           <h1>{isStaffLogin ? "Log-in details" : "Shopping profile"} — {edit.name}</h1>
           <div className="card">
-            <label className="f">Role/s — Employee, Approver, or both</label>
-            <div className="row">
-              {["employee", "approver"].map(r => (
-                <label key={r} className="sm" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <input type="checkbox" checked={edit.roles.includes(r)} disabled={isStaffLogin}
-                    onChange={() => toggleRole(r)} />
-                  {MODULE[r]}
-                </label>
-              ))}
-              {isStaffLogin && <span className="sm mut">This is a {edit.roles.join(" / ")} log-in — that module is held on its own, and needs no shopping profile: no Employee Master record, customer, department, location or stores.</span>}
-            </div>
+            {/* The Employee / Approver choice only makes sense for a shopping
+                log-in. A store or admin log-in holds its module on its own, so
+                it is stated rather than offered. */}
+            {isStaffLogin ? (
+              <>
+                <label className="f">Module</label>
+                <div className="row">
+                  {edit.roles.map(r => <Chip key={r} label={MODULE[r]} color={r === "store" ? "#e8a213" : "#3159c7"} />)}
+                </div>
+                <div className="sm mut" style={{ marginTop: 6 }}>
+                  Held on its own — it cannot also be an Employee or Approver log-in, and it needs no
+                  shopping profile: no Employee Master record, customer, department, location or stores.
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="f">Role/s — Employee, Approver, or both</label>
+                <div className="row">
+                  {["employee", "approver"].map(r => (
+                    <label key={r} className="sm" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <input type="checkbox" checked={edit.roles.includes(r)} onChange={() => toggleRole(r)} />
+                      {MODULE[r]}
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
             {edit.roles.length > 1 && (
               <div className="sm mut" style={{ marginTop: 4 }}>
                 Both modules are available in one log-in — the user switches between them in the app
