@@ -19,7 +19,7 @@ const MODULE = {
 };
 const BLANK_NEW = {
   email: "", password: "", name: "", phone: "", telephone: "", username: "",
-  role: "store", empId: "", fromStore: "", toStore: ""
+  role: "store", empId: "", customer: "", dept: "", location: "", fromStore: "", toStore: ""
 };
 
 export default function UsersPage() {
@@ -57,9 +57,14 @@ export default function UsersPage() {
   }
   async function createLogin() {
     if (!add.email || !add.password || !add.name) return alert("Name, e-mail and password are required");
+    const isEmp = add.role === "employee";
+    if (isEmp && (!add.empId.trim() || !add.customer || !add.phone.trim()))
+      return alert("Employee ID, Customer Name and Mobile Phone are required — they go into the Employee Master");
+    /* Only the Employee module carries Employee Master fields. */
+    const body = isEmp ? { ...add } : { ...add, empId: "", customer: "", dept: "", location: "" };
     setBusy(true);
     try {
-      await api("/api/admin/users", { method: "POST", body: { ...add, roles: [add.role] } });
+      await api("/api/admin/users", { method: "POST", body: { ...body, roles: [add.role] } });
       setAdd(null); await load();
     } catch (e) { alert(e.message); } finally { setBusy(false); }
   }
@@ -152,21 +157,47 @@ export default function UsersPage() {
               {add.role === "store"
                 ? "The store is under PROSAFE control, so a store log-in needs no Employee Master record — just a user name (e-mail) and a password."
                 : add.role === "employee"
-                  ? "Employees normally register themselves; a log-in created here still needs a price list before it can shop."
+                  ? "Creates the log-in and its Employee Master record together. The log-in still needs a price list (Set up) before it can shop."
                   : add.role === "admin"
                     ? "Admin log-ins are permanently protected once created."
                     : "Approvers review orders sent for EGA approval."}
             </div>
             <div className="row">
-              <div style={{ flex: 1 }}><label className="f">Name *</label><input maxLength={30} value={add.name} onChange={e => setAdd({ ...add, name: e.target.value })} /></div>
+              <div style={{ flex: 1 }}><label className="f">{add.role === "employee" ? "Employee Name *" : "Name *"}</label><input maxLength={30} value={add.name} onChange={e => setAdd({ ...add, name: e.target.value })} /></div>
               <div style={{ flex: 1 }}><label className="f">User Name (e-mail) *</label><input maxLength={30} value={add.email} onChange={e => setAdd({ ...add, email: e.target.value })} placeholder="store@prosafe.ae" /></div>
             </div>
             <div className="row">
               <div style={{ flex: 1 }}><label className="f">Password * (min 6)</label><input type="password" value={add.password} onChange={e => setAdd({ ...add, password: e.target.value })} /></div>
               <div style={{ flex: 1 }}><label className="f">Short user name (max 8)</label><input maxLength={8} value={add.username} onChange={e => setAdd({ ...add, username: e.target.value })} /></div>
             </div>
+            {/* Employee module: Employee Master fields, saved to Masters →
+                Employees together with the log-in. */}
+            {add.role === "employee" && (
+              <>
+                <div className="row">
+                  <div style={{ flex: 1 }}><label className="f">Employee ID *</label><input maxLength={15} value={add.empId} onChange={e => setAdd({ ...add, empId: e.target.value })} /></div>
+                  <div style={{ flex: 1 }}><label className="f">Customer Name *</label>
+                    <select value={add.customer} onChange={e => setAdd({ ...add, customer: e.target.value })}>
+                      <option value="">—</option>
+                      {m.customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select></div>
+                </div>
+                <div className="row">
+                  <div style={{ flex: 1 }}><label className="f">Department</label>
+                    <select value={add.dept} onChange={e => setAdd({ ...add, dept: e.target.value })}>
+                      <option value="">—</option>
+                      {m.departments.map(d => <option key={d.code} value={d.code}>{d.code} — {d.name}</option>)}
+                    </select></div>
+                  <div style={{ flex: 1 }}><label className="f">Location</label>
+                    <select value={add.location} onChange={e => setAdd({ ...add, location: e.target.value })}>
+                      <option value="">—</option>
+                      {m.locations.map(l => <option key={l.code} value={l.code}>{l.code} — {l.name}</option>)}
+                    </select></div>
+                </div>
+              </>
+            )}
             <div className="row">
-              <div style={{ flex: 1 }}><label className="f">Mobile Phone</label><input maxLength={15} value={add.phone} onChange={e => setAdd({ ...add, phone: e.target.value })} /></div>
+              <div style={{ flex: 1 }}><label className="f">Mobile Phone{add.role === "employee" ? " *" : ""}</label><input maxLength={15} value={add.phone} onChange={e => setAdd({ ...add, phone: e.target.value })} /></div>
               <div style={{ flex: 1 }}><label className="f">Telephone</label><input maxLength={15} value={add.telephone} onChange={e => setAdd({ ...add, telephone: e.target.value })} /></div>
             </div>
           </div>

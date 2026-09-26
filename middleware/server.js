@@ -1123,6 +1123,24 @@ app.post("/api/admin/inventory/transfer", requireAuth("store"), wrap(async (req,
   res.json({ ok: true, transfer: doc });
 }));
 
+/* Employee Master record checks — shared by Masters → Employees and by the
+   Users → New log-in form (Employee module), which creates the master record
+   and the log-in together. Normalises `body` in place; returns an error
+   message or null. */
+function validateEmployeeRecord(m, body) {
+  body.empId = String(body.empId || "").trim();
+  if (!body.empId) return "Employee ID is required";
+  body.phone = String(body.phone || "").trim();
+  if (!body.phone) return "Mobile Phone is required — registration validates it against the Employee Master";
+  if (!String(body.name || "").trim()) return "Employee Name is required";
+  if (body.customer && !m.customers.find(c => c.id === body.customer)) return `Unknown customer ${body.customer}`;
+  if (body.dept && !m.departments.find(d => d.code === body.dept)) return `Unknown department ${body.dept}`;
+  if (body.location && !m.locations.find(l => l.code === body.location)) return `Unknown location ${body.location}`;
+  const clash = (m.employees || []).find(e => e.empId !== body.empId && String(e.phone || "").replace(/\D/g, "") === body.phone.replace(/\D/g, ""));
+  if (clash) return `That Mobile Phone already belongs to ${clash.empId} — the two data points must identify one employee`;
+  return null;
+}
+
 /* ══════════════════ ADMIN: users, masters & ERP console ══════════════════ */
 app.get("/api/admin/users", requireAuth("admin"), wrap(async (req, res) => {
   res.json((await store.listProfiles()).map(pub));
@@ -1137,7 +1155,38 @@ app.post("/api/admin/users", requireAuth("admin"), wrap(async (req, res) => {
   const roles = Array.isArray(body.roles) && body.roles.length ? body.roles : [body.role].filter(Boolean);
   const bad = validateRoles(roles);
   if (bad) return res.status(400).json({ error: bad });
-  const p = await authsvc.adminCreateLogin({ ...body, roles, role: roles[0] });
+  /* Employee module: the same form creates the Employee Master record, so the
+     admin does not have to enter the employee twice. The record is checked
+     before the log-in is created, so a bad record never leaves a half-made
+     log-in behind. (Masters → Employees still creates records on its own.) */
+  let emp = null;
+  if (roles.includes("employee")) {
+    const m = await masters();
+    emp = {
+      empId: body.empId, name: body.name, customer: body.customer || "",
+      dept: body.dept || "", location: body.location || "",
+      phone: body.phone, telephone: body.telephone || "",
+      email: String(body.email || "").trim().toLowerCase()
+    };
+    if (!emp.customer) return res.status(400).json({ error: "Customer Name is required for the Employee Master" });
+    const bad = validateEmployeeRecord(m, emp);
+    if (bad) return res.status(400).json({ error: bad });
+    const existing = (m.employees || []).find(e => String(e.empId).toLowerCase() === emp.empId.toLowerCase());
+    if (existing)
+      return res.status(409).json({ error: `Employee ID ${existing.empId} is already in the Employee Master — use a new ID, or create the log-in and link it with Set up` });
+    const taken = (await store.listProfiles()).find(u => String(u.empId || "").toLowerCase() === emp.empId.toLowerCase());
+    if (taken) return res.status(409).json({ error: `Employee ID ${emp.empId} is already used by the log-in ${taken.email}` });
+  }
+  const p = await authsvc.adminCreateLogin({ ...body, ...(emp ? { empId: emp.empId } : {}), roles, role: roles[0] });
+  if (emp) {
+    try {
+      await store.upsertMaster("employees", emp);
+    } catch (e) {
+      await authsvc.deleteAccount(p.id).catch(() => {});
+      throw e;
+    }
+    await store.erpLog(`Master employees upserted by ${req.user.name} with log-in: ${emp.empId} — ${emp.name}`);
+  }
   await store.erpLog(`Log-in created by ${req.user.name}: ${p.email} (${roles.join(" + ")})`);
   res.status(201).json(pub(p));
 }));
@@ -1228,15 +1277,8 @@ app.post("/api/admin/masters/:kind", requireAuth("admin"), wrap(async (req, res)
      Employee ID against it and then checks the Mobile Phone, so both are
      mandatory here. */
   if (kind === "employees") {
-    body.empId = String(body.empId || "").trim();
-    if (!body.empId) return res.status(400).json({ error: "Employee ID is required" });
-    body.phone = String(body.phone || "").trim();
-    if (!body.phone) return res.status(400).json({ error: "Mobile Phone is required — registration validates it against this master" });
-    if (!String(body.name || "").trim()) return res.status(400).json({ error: "Employee Name is required" });
-    if (body.customer && !m.customers.find(c => c.id === body.customer))
-      return res.status(400).json({ error: `Unknown customer ${body.customer}` });
-    const clash = (m.employees || []).find(e => e.empId !== body.empId && String(e.phone || "").replace(/\D/g, "") === body.phone.replace(/\D/g, ""));
-    if (clash) return res.status(400).json({ error: `That Mobile Phone already belongs to ${clash.empId} — the two data points must identify one employee` });
+    const bad = validateEmployeeRecord(m, body);
+    if (bad) return res.status(400).json({ error: bad });
   }
   if (kind === "stores" && body.type && !["main", "reservation"].includes(body.type))
     return res.status(400).json({ error: "store type must be main|reservation" });

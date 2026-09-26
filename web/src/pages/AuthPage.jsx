@@ -27,7 +27,7 @@ function Ro({ label, value }) {
 }
 
 export default function AuthPage() {
-  const { setUser, setCustomer, setPending, refreshCatalog } = useApp();
+  const { setUser, setCustomer, setPending, refreshCatalog, refreshCart } = useApp();
   const [mode, setMode] = useState("login");
   const [login, setLogin] = useState({ email: "", password: "" });
   const [f, setF] = useState(BLANK);
@@ -71,7 +71,9 @@ export default function AuthPage() {
       const r = await api("/api/auth/login", { method: "POST", body: login });
       setSession(r.token, r.refreshToken);
       setUser(r.user); setCustomer(r.customer); setPending(!!r.pendingActivation);
-      if (r.user.role === "employee" && !r.pendingActivation) refreshCatalog();
+      /* Load the cart too: a 10-minute cart survives signing out and back in,
+         and without this the Carts screen showed empty until a page reload. */
+      if (r.user.role === "employee" && !r.pendingActivation) { refreshCatalog(); refreshCart(); }
     } catch (err) { setMsg({ ok: false, text: err.message }); } finally { setBusy(false); }
   }
 
