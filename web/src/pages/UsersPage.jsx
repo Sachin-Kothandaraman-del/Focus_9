@@ -56,15 +56,27 @@ export default function UsersPage() {
     if (ok) setEdit(null);
   }
   async function createLogin() {
-    if (!add.email || !add.password || !add.name) return alert("Name, e-mail and password are required");
-    const isEmp = add.role === "employee";
-    if (isEmp && (!add.empId.trim() || !add.customer || !add.phone.trim()))
-      return alert("Employee ID, Customer Name and Mobile Phone are required — they go into the Employee Master");
-    /* Only the Employee module carries Employee Master fields. */
-    const body = isEmp ? { ...add } : { ...add, empId: "", customer: "", dept: "", location: "" };
     setBusy(true);
     try {
-      await api("/api/admin/users", { method: "POST", body: { ...body, roles: [add.role] } });
+      if (add.role === "employee") {
+        /* Employee module = Employee Master record, exactly as Masters →
+           Employees → New. No password: the employee self-registers. */
+        const { empId, name, customer, dept, location, phone, telephone, email } = add;
+        if (!empId.trim() || !name.trim() || !customer || !phone.trim())
+          return alert("Employee ID, Employee Name, Customer Name and Mobile Phone are required");
+        if ((m.employees || []).some(e => String(e.empId).toLowerCase() === empId.trim().toLowerCase()))
+          return alert(`Employee ID ${empId.trim()} already exists in the Employee Master`);
+        await api("/api/admin/masters/employees", {
+          method: "POST",
+          body: { empId: empId.trim(), name: name.trim(), customer, dept, location, phone: phone.trim(), telephone: telephone.trim(), email: email.trim() }
+        });
+      } else {
+        if (!add.email || !add.password || !add.name) return alert("Name, e-mail and password are required");
+        await api("/api/admin/users", {
+          method: "POST",
+          body: { ...add, empId: "", customer: "", dept: "", location: "", roles: [add.role] }
+        });
+      }
       setAdd(null); await load();
     } catch (e) { alert(e.message); } finally { setBusy(false); }
   }
@@ -147,7 +159,7 @@ export default function UsersPage() {
 
       {add && (
         <Modal onClose={() => setAdd(null)}>
-          <h1>New log-in</h1>
+          <h1>{add.role === "employee" ? "New — Employees" : "New log-in"}</h1>
           <div className="card">
             <label className="f">Module</label>
             <select value={add.role} onChange={e => setAdd({ ...add, role: e.target.value })}>
@@ -157,54 +169,64 @@ export default function UsersPage() {
               {add.role === "store"
                 ? "The store is under PROSAFE control, so a store log-in needs no Employee Master record — just a user name (e-mail) and a password."
                 : add.role === "employee"
-                  ? "Creates the log-in and its Employee Master record together. The log-in still needs a price list (Set up) before it can shop."
+                  ? "Creates the Employee Master record — the same as Masters → Employees. The employee then registers in the app with this Employee ID and Mobile Phone and sets their own password; activate them here and assign the price list/s."
                   : add.role === "admin"
                     ? "Admin log-ins are permanently protected once created."
                     : "Approvers review orders sent for EGA approval."}
             </div>
-            <div className="row">
-              <div style={{ flex: 1 }}><label className="f">{add.role === "employee" ? "Employee Name *" : "Name *"}</label><input maxLength={30} value={add.name} onChange={e => setAdd({ ...add, name: e.target.value })} /></div>
-              <div style={{ flex: 1 }}><label className="f">User Name (e-mail) *</label><input maxLength={30} value={add.email} onChange={e => setAdd({ ...add, email: e.target.value })} placeholder="store@prosafe.ae" /></div>
-            </div>
-            <div className="row">
-              <div style={{ flex: 1 }}><label className="f">Password * (min 6)</label><input type="password" value={add.password} onChange={e => setAdd({ ...add, password: e.target.value })} /></div>
-              <div style={{ flex: 1 }}><label className="f">Short user name (max 8)</label><input maxLength={8} value={add.username} onChange={e => setAdd({ ...add, username: e.target.value })} /></div>
-            </div>
-            {/* Employee module: Employee Master fields, saved to Masters →
-                Employees together with the log-in. */}
-            {add.role === "employee" && (
+
+            {add.role === "employee" ? (
+              /* Same fields, order and rules as Masters → Employees → New. */
+              <>
+                <label className="f">Employee ID *</label>
+                <input style={{ maxWidth: 240 }} maxLength={15} value={add.empId} onChange={e => setAdd({ ...add, empId: e.target.value })} />
+                <label className="f">Employee Name *</label>
+                <input style={{ maxWidth: 240 }} maxLength={30} value={add.name} onChange={e => setAdd({ ...add, name: e.target.value })} />
+                <label className="f">Customer Name *</label>
+                <select style={{ maxWidth: 260 }} value={add.customer} onChange={e => setAdd({ ...add, customer: e.target.value })}>
+                  <option value="">—</option>
+                  {m.customers.map(c => <option key={c.id} value={c.id}>{c.id} — {c.name}</option>)}
+                </select>
+                <label className="f">Department</label>
+                <select style={{ maxWidth: 280 }} value={add.dept} onChange={e => setAdd({ ...add, dept: e.target.value })}>
+                  <option value="">—</option>
+                  {m.departments.map(d => <option key={d.code} value={d.code}>{d.code} — {d.name}</option>)}
+                </select>
+                <label className="f">Location</label>
+                <select style={{ maxWidth: 190 }} value={add.location} onChange={e => setAdd({ ...add, location: e.target.value })}>
+                  <option value="">—</option>
+                  {m.locations.map(l => <option key={l.code} value={l.code}>{l.code} — {l.name}</option>)}
+                </select>
+                <label className="f">Mobile Phone *</label>
+                <input style={{ maxWidth: 240 }} maxLength={15} value={add.phone} onChange={e => setAdd({ ...add, phone: e.target.value })} />
+                <label className="f">Telephone</label>
+                <input style={{ maxWidth: 240 }} maxLength={15} value={add.telephone} onChange={e => setAdd({ ...add, telephone: e.target.value })} />
+                <label className="f">E-mail</label>
+                <input style={{ maxWidth: 240 }} maxLength={30} value={add.email} onChange={e => setAdd({ ...add, email: e.target.value })} />
+              </>
+            ) : (
               <>
                 <div className="row">
-                  <div style={{ flex: 1 }}><label className="f">Employee ID *</label><input maxLength={15} value={add.empId} onChange={e => setAdd({ ...add, empId: e.target.value })} /></div>
-                  <div style={{ flex: 1 }}><label className="f">Customer Name *</label>
-                    <select value={add.customer} onChange={e => setAdd({ ...add, customer: e.target.value })}>
-                      <option value="">—</option>
-                      {m.customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select></div>
+                  <div style={{ flex: 1 }}><label className="f">Name *</label><input maxLength={30} value={add.name} onChange={e => setAdd({ ...add, name: e.target.value })} /></div>
+                  <div style={{ flex: 1 }}><label className="f">User Name (e-mail) *</label><input maxLength={30} value={add.email} onChange={e => setAdd({ ...add, email: e.target.value })} placeholder="store@prosafe.ae" /></div>
                 </div>
                 <div className="row">
-                  <div style={{ flex: 1 }}><label className="f">Department</label>
-                    <select value={add.dept} onChange={e => setAdd({ ...add, dept: e.target.value })}>
-                      <option value="">—</option>
-                      {m.departments.map(d => <option key={d.code} value={d.code}>{d.code} — {d.name}</option>)}
-                    </select></div>
-                  <div style={{ flex: 1 }}><label className="f">Location</label>
-                    <select value={add.location} onChange={e => setAdd({ ...add, location: e.target.value })}>
-                      <option value="">—</option>
-                      {m.locations.map(l => <option key={l.code} value={l.code}>{l.code} — {l.name}</option>)}
-                    </select></div>
+                  <div style={{ flex: 1 }}><label className="f">Password * (min 6)</label><input type="password" value={add.password} onChange={e => setAdd({ ...add, password: e.target.value })} /></div>
+                  <div style={{ flex: 1 }}><label className="f">Short user name (max 8)</label><input maxLength={8} value={add.username} onChange={e => setAdd({ ...add, username: e.target.value })} /></div>
+                </div>
+                <div className="row">
+                  <div style={{ flex: 1 }}><label className="f">Mobile Phone</label><input maxLength={15} value={add.phone} onChange={e => setAdd({ ...add, phone: e.target.value })} /></div>
+                  <div style={{ flex: 1 }}><label className="f">Telephone</label><input maxLength={15} value={add.telephone} onChange={e => setAdd({ ...add, telephone: e.target.value })} /></div>
                 </div>
               </>
             )}
-            <div className="row">
-              <div style={{ flex: 1 }}><label className="f">Mobile Phone{add.role === "employee" ? " *" : ""}</label><input maxLength={15} value={add.phone} onChange={e => setAdd({ ...add, phone: e.target.value })} /></div>
-              <div style={{ flex: 1 }}><label className="f">Telephone</label><input maxLength={15} value={add.telephone} onChange={e => setAdd({ ...add, telephone: e.target.value })} /></div>
-            </div>
           </div>
           <div className="row">
             <button className="btn ghost" onClick={() => setAdd(null)}>Cancel</button>
             <span className="grow" />
-            <button className="btn" disabled={busy} onClick={createLogin}>{busy ? "Creating…" : "Create log-in"}</button>
+            <button className="btn" disabled={busy} onClick={createLogin}>
+              {busy ? "Saving…" : add.role === "employee" ? "Save" : "Create log-in"}
+            </button>
           </div>
         </Modal>
       )}
