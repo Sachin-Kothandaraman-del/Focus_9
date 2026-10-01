@@ -26,6 +26,12 @@
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f499dd84-ad99-4db2-afcd-1f7840fcac34"
+      }
+    },
+    "owner": "bluethundermay2003"
   }
 }
